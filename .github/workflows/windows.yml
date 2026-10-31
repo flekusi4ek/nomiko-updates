@@ -102,8 +102,11 @@ jobs:
           }
           $request = (Get-Content '.github/release-request.txt' -Raw).Trim()
           if ($request -ne "PUBLISH $tag") { throw "Release request '$request' does not match $tag" }
-          gh release view $tag --repo '${{ github.repository }}' --json tagName *> $null
-          if ($LASTEXITCODE -eq 0) {
+          # 'gh release view' exits with 1 for a missing release, which PowerShell
+          # may treat as a terminating native-command error. Listing is safe.
+          $releaseTags = gh release list --repo '${{ github.repository }}' --limit 100 --json tagName | ConvertFrom-Json
+          if ($LASTEXITCODE -ne 0) { throw 'Unable to list GitHub releases' }
+          if (@($releaseTags | Where-Object { $_.tagName -eq $tag }).Count -gt 0) {
             'publish=false' >> $env:GITHUB_OUTPUT
             Write-Host "Already released: $tag"
           } else {
