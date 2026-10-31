@@ -43,10 +43,11 @@ class CoreTests(unittest.TestCase):
         self.assertIn('action="' + INTERNAL_SEARCH_ACTION + '"', html)
         self.assertIn('method="GET"', html)
         self.assertIn('name="q"', html)
-        self.assertIn('form="nomikoSearchForm"', html)
-        self.assertIn('<option value="DuckDuckGo" selected>', html)
-        self.assertIn('<option value="NOMIKO Search">', html)
-        self.assertIn('<option value="Google">', html)
+        self.assertIn('name="engine" value="DuckDuckGo"', html)
+        self.assertIn('class="engine-picker"', html)
+        self.assertIn('data-engine="DuckDuckGo"', html)
+        self.assertIn('data-engine="NOMIKO Search"', html)
+        self.assertIn('data-engine="Google"', html)
         self.assertNotIn('nomikoBridge', html)
         self.assertNotIn('Wikipedia', html)
         self.assertIn('user-select:none', html)
@@ -118,9 +119,10 @@ class CoreTests(unittest.TestCase):
     def test_removed_search_engines_not_displayed_on_home(self):
         html = render_home('#9A82FF', [], engine='DuckDuckGo',
                            visible_engines=['DuckDuckGo'])
-        self.assertIn('<option value="DuckDuckGo" selected>', html)
-        self.assertNotIn('<option value="Google">', html)
-        self.assertNotIn('<option value="NOMIKO Search">', html)
+        self.assertIn('name="engine" value="DuckDuckGo"', html)
+        self.assertNotIn('class="engine-picker"', html)
+        self.assertNotIn('data-engine="Google"', html)
+        self.assertNotIn('data-engine="NOMIKO Search"', html)
 
     def test_readable_accent_contrast(self):
         self.assertEqual(storage.readable_accent('#000000', 'light'), '#000000')
