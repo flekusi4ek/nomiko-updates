@@ -1,5 +1,12 @@
 # NOMIKO changelog
 
+## v0.9.2 Alpha
+- Home page: choose search providers using one small button at the left of the search field.
+- Hide the provider button automatically when only one provider is enabled.
+- Hide bookmarks bar with no saved toolbar bookmarks; show it on the first bookmark, hide after deleting the last.
+- Published through signed GitHub Releases for in-app updates from v0.9.1.
+
+
 ## v0.9.1 Alpha
 - Graphite NOMIKO Windows icon (16px to 256px).
 - EXE and taskbar icon + stable AppUserModelID.
