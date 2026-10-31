@@ -27,6 +27,7 @@ from PySide6.QtNetwork import QNetworkAccessManager, QNetworkRequest, QNetworkRe
 from PySide6.QtWebEngineWidgets import QWebEngineView
 
 from .home import render_home, render_search_results
+from .bookmark_visibility import has_bookmark_toolbar_content
 from .tab_drag import drop_index, neighbor_shift
 from .update_trust import CURRENT_VERSION
 from .update_ui import UpdateCenter, UpdateWorker
@@ -677,7 +678,9 @@ class BookmarksRail(QWidget):
         while self.line.count():
             child = self.line.takeAt(0)
             if child.widget(): child.widget().deleteLater()
-        records = [x for x in self.browser.store.bookmarks if x.get('folder','toolbar') == 'toolbar']
+        records = [x for x in self.browser.store.bookmarks
+                   if x.get('folder', 'toolbar') == 'toolbar'
+                   and str(x.get('url', '')).startswith(('https://', 'http://'))]
         side = self.browser.store.settings.get('bookmark_position','top') in ('left','right')
         for row in records[:9 if side else 4]:
             title = str(row.get('title') or row.get('url') or '')
@@ -710,7 +713,8 @@ class BookmarksRail(QWidget):
         more.clicked.connect(show_more)
         self.line.addWidget(more)
         self.line.addStretch(1)
-        self.setVisible(self.browser.store.settings.get('bookmark_bar_visible', True))
+        self._grip.setVisible(side and bool(records))
+        self.setVisible(bool(records) and self.browser.store.settings.get('bookmark_bar_visible', True))
         self._position_grip()
 
     def _position_grip(self):
@@ -2121,7 +2125,10 @@ class BrowserWindow(QMainWindow):
         layout.addWidget(self.bookmarks_rail)
         layout.addWidget(self.tabs, 1)
         self.bookmarks_rail.configure(place)
-        self.bookmarks_rail.setVisible(self.store.settings.get('bookmark_bar_visible',True))
+        self.bookmarks_rail.setVisible(
+            self.store.settings.get('bookmark_bar_visible', True)
+            and has_bookmark_toolbar_content(self.store.bookmarks)
+        )
 
     def open_donation(self):
         QDesktopServices.openUrl(QUrl('https://send.monobank.ua/jar/91HH8iY31q'))
