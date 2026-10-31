@@ -42,32 +42,56 @@ form.search:focus-within{{border-color:{p['ink']}}}
 form.search input{{flex:1;padding:11px 9px}}
 form.search button{{width:37px;height:37px;flex:none;display:grid;place-items:center;border:0;border-radius:10px;background:{p['a']};color:#10121B;cursor:pointer}}
 form.search button:hover{{filter:brightness(1.12)}}
-.engine{{margin-top:13px;display:flex;justify-content:center;align-items:center;gap:8px;color:{p['quiet']};font-size:12px}}
-.engine select{{background:{p['surface']};border:1px solid {p['line']};border-radius:8px;padding:6px;color:{p['ink']};font-size:12px}}
+.engine-picker{{position:relative;flex:none;z-index:20;align-self:center}}
+.engine-picker summary{{list-style:none;width:37px;height:37px;display:grid;place-items:center;cursor:pointer;border-radius:9px;border:1px solid {p['line']};background:{p['surface2']};color:{p['ink']}}}
+.engine-picker summary::-webkit-details-marker{{display:none}}
+.engine-picker summary:hover,.engine-picker[open] summary{{border-color:{p['a']}}}
+.engine-picker summary:focus-visible{{outline:2px solid {p['a']};outline-offset:2px}}
+.engine-menu{{position:absolute;top:43px;left:0;min-width:173px;padding:5px;border:1px solid {p['line']};border-radius:10px;background:{p['surface']};box-shadow:0 12px 32px #00000044;z-index:50}}
+.engine-picker .engine-menu button{{width:100%;height:auto;min-height:33px;text-align:left;display:block;padding:7px 10px;border-radius:7px;border:0;background:transparent;color:{p['ink']};font-size:12px;white-space:nowrap}}
+.engine-picker .engine-menu button:hover{{background:{p['surface2']};filter:none}}
 a{{color:{p['ink']}}}a:hover{{color:{p['a']}}}
 </style>'''
 
 
 def _engine_select(engine: str, visible_engines=None, language: str = 'en') -> str:
+    """One search provider button to the left of the input, hidden for one provider."""
     allowed = [name for name in ENGINE_OPTIONS if visible_engines is None or name in visible_engines]
     if not allowed:
         allowed = ['DuckDuckGo']
     if engine not in allowed:
         engine = allowed[0]
-    opts = ''.join(
-        f'<option value="{escape(name, quote=True)}"{" selected" if name == engine else ""}>{escape(name)}</option>'
+    hidden = f'<input type="hidden" name="engine" value="{escape(engine, quote=True)}"/>'
+    if len(allowed) == 1:
+        return hidden
+    choices = ''.join(
+        '<button type="button" data-engine="' + escape(name, quote=True) + '" '
+        'onclick="this.closest(\'form\').elements[\'engine\'].value=this.dataset.engine;'
+        'this.closest(\'details\').querySelector(\'summary\').title=this.dataset.engine;'
+        'this.closest(\'details\').removeAttribute(\'open\')">'
+        + escape(name) + '</button>'
         for name in allowed
     )
-    return f'<label class="engine">Search with <select name="engine" form="nomikoSearchForm" aria-label="Search engine">{opts}</select></label>'
-
+    glyph = ('<svg width="17" height="17" viewBox="0 0 24 24" fill="none" '
+             'stroke="currentColor" stroke-width="1.8" stroke-linecap="round" '
+             'stroke-linejoin="round" aria-hidden="true">'
+             '<circle cx="10.5" cy="10.5" r="5.7"/>'
+             '<path d="m14.8 14.8 4.3 4.3 M18 5h3 M19.5 3.5v3"/></svg>')
+    return (
+        hidden + '<details class="engine-picker">'
+        '<summary title="' + escape(engine, quote=True) + '" '
+        'aria-label="Choose search engine">' + glyph + '</summary>'
+        '<div class="engine-menu">' + choices + '</div></details>'
+    )
 
 def _form(engine: str, query: str = '', placeholder: str = 'Search or enter a website…', visible_engines=None, language: str = 'en') -> str:
     return (
         f'<form id="nomikoSearchForm" class="search" action="{INTERNAL_SEARCH_ACTION}" method="GET">'
-        f'<input name="q" maxlength="250" value="{escape(query, quote=True)}" '
+        + _engine_select(engine, visible_engines, language)
+        + f'<input name="q" maxlength="250" value="{escape(query, quote=True)}" '
         f'aria-label="{escape(tr("Search", language), quote=True)}" placeholder="{escape(tr(placeholder, language), quote=True)}" autocomplete="off" autofocus/>'
         f'<button type="submit" aria-label="{escape(tr("Search", language), quote=True)}">{MAGNIFIER}</button>'
-        f'{""}</form>' + _engine_select(engine, visible_engines, language)
+        '</form>'
     )
 
 
@@ -185,7 +209,7 @@ def render_search_results(query: str, accent: str, bookmarks: list, history: lis
     )
     return f'''<!doctype html><html lang="{escape(language, quote=True)}"><head><meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
-<meta http-equiv="Content-Security-Policy" content="default-src 'none';style-src 'unsafe-inline';form-action https://nomiko.invalid; base-uri 'none'"/>
+<meta http-equiv="Content-Security-Policy" content="default-src 'none';style-src 'unsafe-inline';script-src 'unsafe-inline';form-action https://nomiko.invalid; base-uri 'none'"/>
 <title>{escape(query)} — NOMIKO Search</title>{_common_style(p)}
 <style>
 body{{padding:35px 24px}}.wrap{{max-width:810px;margin:0 auto}}
