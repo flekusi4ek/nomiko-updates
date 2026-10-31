@@ -8,7 +8,6 @@ Name "${APPNAME} ${VERSION} Alpha"
 OutFile "NOMIKO-Setup-0.9.1-alpha.exe"
 InstallDir "$LOCALAPPDATA\Programs\NOMIKO"
 RequestExecutionLevel user
-SetShellVarContext current
 SetCompressor /SOLID lzma
 !insertmacro MUI_PAGE_WELCOME
 !insertmacro MUI_PAGE_DIRECTORY
