@@ -63,7 +63,7 @@ class V072Tests(TestCase):
         self.assertIn('QToolButton#brand:hover, QToolButton#brand:pressed', ui)
         self.assertIn('def set_side_width(self, value)', ui)
         self.assertIn('def _save_bookmark_sidebar_width', ui)
-        self.assertIn('searchPickerCombo', ui)
+        self.assertIn('def show_main_menu(self)', ui)
         self.assertIn('record_download', ui)
         self.assertIn("self.row(box, 'FMAIL (optional)', email)", settings)
         self.assertIn('def update_wallpaper_preview', settings)
