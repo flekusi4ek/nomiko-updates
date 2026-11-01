@@ -496,3 +496,31 @@ for _language, _mapping in {
   }
 }.items():
     TRANSLATIONS.setdefault(_language, {}).update(_mapping)
+
+# Additional v0.9.5 settings actions; every button uses the same offline catalog.
+for _locale, _pairs in {
+    'uk': {'Local profile':'Локальний профіль','Open downloads folder':'Відкрити папку завантажень',
+           'Clear download history (keep files)':'Очистити історію завантажень (залишити файли)',
+           'Open local profile folder':'Відкрити папку локального профілю',
+           'Clear download history':'Очистити історію завантажень',
+           'Download history cleared':'Історію завантажень очищено',
+           'Open Windows Settings → Apps → Default apps, select NOMIKO and choose HTTP and HTTPS.':'Відкрий Налаштування Windows → Програми → Програми за замовчуванням, вибери NOMIKO для HTTP та HTTPS.',
+           'Remove saved download records? Downloaded files will not be deleted.':'Видалити записи про завантаження? Самі файли залишаться.'},
+    'ru': {'Local profile':'Локальный профиль','Open downloads folder':'Открыть папку загрузок',
+           'Clear download history (keep files)':'Очистить историю загрузок (сохранить файлы)',
+           'Open local profile folder':'Открыть папку локального профиля',
+           'Clear download history':'Очистить историю загрузок',
+           'Download history cleared':'История загрузок очищена',
+           'Remove saved download records? Downloaded files will not be deleted.':'Удалить записи о загрузках? Сами файлы сохранятся.'},
+    'pl': {'Local profile':'Profil lokalny','Open downloads folder':'Otwórz folder pobierania',
+           'Clear download history (keep files)':'Wyczyść historię pobierania (zachowaj pliki)',
+           'Open local profile folder':'Otwórz folder profilu lokalnego',
+           'Clear download history':'Wyczyść historię pobierania',
+           'Download history cleared':'Historia pobierania wyczyszczona'},
+    'de': {'Local profile':'Lokales Profil','Open downloads folder':'Downloadordner öffnen',
+           'Clear download history (keep files)':'Downloadverlauf löschen (Dateien behalten)',
+           'Open local profile folder':'Lokalen Profilordner öffnen',
+           'Clear download history':'Downloadverlauf löschen',
+           'Download history cleared':'Downloadverlauf gelöscht'},
+}.items():
+    TRANSLATIONS.setdefault(_locale, {}).update(_pairs)
