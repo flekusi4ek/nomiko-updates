@@ -14,6 +14,7 @@ from PySide6.QtWidgets import (
 )
 from PySide6.QtWebEngineWidgets import QWebEngineView
 from PySide6.QtWebEngineCore import QWebEngineSettings
+from .zoom import apply_zoom_to_view
 from .productivity import (
     parse_bookmarks_html, bookmarks_to_html, safe_web_url,
     export_backup, import_backup, normalized_workspaces,
@@ -316,8 +317,11 @@ class SplitPane(QWidget):
         self.view.settings().setAttribute(
             QWebEngineSettings.WebAttribute.PlaybackRequiresUserGesture,
             self.browser.store.settings.get('autoplay_guard', True))
+        apply_zoom_to_view(self.view, self.browser.store.settings)
         self.view.urlChanged.connect(self.on_url_changed)
         self.view.loadFinished.connect(self.on_load_finished)
+        self.view.loadFinished.connect(
+            lambda _ok: apply_zoom_to_view(self.view, self.browser.store.settings))
         self.view.titleChanged.connect(lambda _title: self.split.update_tab_title())
         layout.addWidget(self.view, 1)
         self.update_navigation()
