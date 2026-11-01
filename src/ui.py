@@ -27,6 +27,8 @@ from PySide6.QtNetwork import QNetworkAccessManager, QNetworkRequest, QNetworkRe
 from PySide6.QtWebEngineWidgets import QWebEngineView
 
 from .home import render_home, render_search_results
+from .zoom import configure_zoom_script, apply_zoom_to_view
+from .zoom_settings import zoom_percent, zoom_text_only, ZOOM_LEVELS
 from .bookmark_visibility import has_bookmark_toolbar_content
 from .tab_drag import drop_index, neighbor_shift
 from .update_trust import CURRENT_VERSION
@@ -835,6 +837,9 @@ class BrowserView(QWebEngineView):
         self.settings().setAttribute(QWebEngineSettings.WebAttribute.LocalContentCanAccessRemoteUrls, False)
         self.settings().setAttribute(QWebEngineSettings.WebAttribute.PlaybackRequiresUserGesture,
                                      browser.store.settings.get('autoplay_guard', True))
+        apply_zoom_to_view(self, browser.store.settings)
+        self.loadFinished.connect(
+            lambda _ok: apply_zoom_to_view(self, browser.store.settings))
 
     def createWindow(self, window_type):  # noqa: N802
         return self.browser.new_tab()
@@ -897,7 +902,7 @@ class BrowserWindow(QMainWindow):
         self.profile.downloadRequested.connect(self.on_download)
         # User controls: limit local WebRTC address exposure and DNS prefetching.
         self._configure_privacy(self.store.settings)
-
+        configure_zoom_script(self.profile, self.store.settings)
 
         self._idle_timer = QTimer(self)
         self._idle_timer.setInterval(10000 if self.store.settings.get('performance_mode') == 'ultra' else 15000)
@@ -1539,10 +1544,18 @@ class BrowserWindow(QMainWindow):
             view = view.active_pane.view
         if not isinstance(view, QWebEngineView):
             return
-        if delta == 0:
-            view.setZoomFactor(1)
+        if zoom_text_only(self.store.settings):
+            current = zoom_percent(self.store.settings)
+            if delta == 0:
+                next_zoom = 100
+            else:
+                ordered = list(ZOOM_LEVELS)
+                next_zoom = next((v for v in ordered if v > current), ordered[-1]) if delta > 0 else next((v for v in reversed(ordered) if v < current), ordered[0])
+            self.update_preference(default_zoom=next_zoom)
+        elif delta == 0:
+            view.setZoomFactor(zoom_percent(self.store.settings) / 100.0)
         else:
-            view.setZoomFactor(min(3, max(0.4, view.zoomFactor() + delta)))
+            view.setZoomFactor(min(3.0, max(0.5, view.zoomFactor() + delta)))
 
     def show_main_menu(self):
         menu = QMenu(self)
@@ -1819,7 +1832,7 @@ class BrowserWindow(QMainWindow):
     def toggle_gaming_mode(self):
         enabled = self.store.settings.get('performance_mode') == 'gaming'
         self.update_preference(performance_mode='balanced' if enabled else 'gaming')
-        self.status.setText('Gaming mode OFF' if enabled else 'Gaming mode ON · background tabs may reload')
+        self.status.setText('Gaming mode OFF' if enabled else 'Gaming mode ON · tabs remain active')
 
     def show_modules(self):
         self.show_settings()
@@ -1830,36 +1843,19 @@ class BrowserWindow(QMainWindow):
             break
 
     def _maintain_background_tabs(self):
-        mode = self.store.settings.get('performance_mode', 'balanced')
+        """Update protection counters only; never freeze or discard web pages.
+
+        Older NOMIKO versions proactively discarded background tabs after
+        a short idle timeout, causing a full reload on activation. Even in
+        Gaming/Ultra modes we now keep the document live until the user
+        explicitly closes it. The operating system may still evict renderers
+        under extreme memory pressure; that is not controlled here.
+        """
         if not self.private:
-            c = self.interceptor.counts()
-            text = f'PROTECTION  ·  ADS {c["ads"]}  /  TRACKERS {c["trackers"]}'
+            counts = self.interceptor.counts()
+            text = f'PROTECTION  ·  ADS {counts["ads"]}  /  TRACKERS {counts["trackers"]}'
             if self.mode_label.text() != text:
                 self.mode_label.setText(text)
-        if mode == 'off':
-            return
-        freeze_after, discard_after = ({'ultra': (10, 35), 'gaming': (25, 90),
-                                       'balanced': (120, 480)}.get(mode, (120, 480)))
-        now = time.monotonic()
-        # Only act on hidden, loaded, ordinary web pages and only as Qt recommends.
-        for i in range(self.tabs.count()):
-            view = self.tabs.widget(i)
-            if not isinstance(view, BrowserView):
-                continue
-            page = view.page()
-            if view is self.current_view() and not self.isMinimized():
-                self._idle_since[view] = now
-                continue
-            idle = now - self._idle_since.setdefault(view, now)
-            if (view.isVisible() and not self.isMinimized()) or page.isLoading() or view.property('nomiko_page'):
-                continue
-            suggested = page.recommendedState()
-            if idle >= discard_after and suggested == QWebEnginePage.LifecycleState.Discarded:
-                page.setLifecycleState(QWebEnginePage.LifecycleState.Discarded)
-            elif idle >= freeze_after and suggested in (QWebEnginePage.LifecycleState.Frozen,
-                                                         QWebEnginePage.LifecycleState.Discarded):
-                if page.lifecycleState() == QWebEnginePage.LifecycleState.Active:
-                    page.setLifecycleState(QWebEnginePage.LifecycleState.Frozen)
 
     def on_widget_action(self, view, values):
         """Handle local home widget forms without contacting nomiko.invalid."""
@@ -2034,6 +2030,15 @@ class BrowserWindow(QMainWindow):
             if 'performance_mode' in changes:
                 win._idle_timer.setInterval(10000 if win.store.settings['performance_mode'] == 'ultra' else 15000)
             changed = set(changes)
+            if changed & {'default_zoom', 'zoom_text_only'}:
+                configure_zoom_script(win.profile, win.store.settings)
+                for tab_index in range(win.tabs.count()):
+                    tab = win.tabs.widget(tab_index)
+                    if isinstance(tab, BrowserView):
+                        apply_zoom_to_view(tab, win.store.settings)
+                    elif isinstance(tab, SplitViewTab):
+                        apply_zoom_to_view(tab.left, win.store.settings)
+                        apply_zoom_to_view(tab.right, win.store.settings)
             if changed & {'tracker_blocking', 'ad_blocking', 'block_exceptions', 'privacy_referrer_policy'}:
                 win.interceptor.configure(
                     win.store.settings.get('tracker_blocking', True),
