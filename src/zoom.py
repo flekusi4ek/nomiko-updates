@@ -8,22 +8,10 @@ from __future__ import annotations
 
 from PySide6.QtWebEngineCore import QWebEngineScript
 
-ZOOM_LEVELS = (50, 67, 75, 80, 90, 100, 110, 120, 125, 133, 150, 170, 175, 200, 250, 300)
+from .zoom_settings import ZOOM_LEVELS, zoom_percent, zoom_text_only
+
 SCRIPT_NAME = "NOMIKO global text-only zoom"
 WORLD_ID = 1  # Qt WebEngine ApplicationWorld, isolated from page JavaScript.
-
-
-def zoom_percent(settings) -> int:
-    """Get a safe, supported percentage; older profiles default to 100%."""
-    try:
-        value = int(settings.get("default_zoom", 100))
-    except (ValueError, TypeError):
-        return 100
-    return value if value in ZOOM_LEVELS else 100
-
-
-def zoom_text_only(settings) -> bool:
-    return settings.get("zoom_text_only", False) is True
 
 
 def text_zoom_javascript(percent=100, enabled=False) -> str:
