@@ -87,8 +87,8 @@ StringTemplate = r"""
 def configure_zoom_script(profile, settings):
     """Make text-only zoom persistent for future navigations and subframes."""
     scripts = profile.scripts()
-    existing = scripts.findScript(SCRIPT_NAME)
-    if not existing.isNull():
+    # Qt for Python exposes find(name) -> list, not findScript().
+    for existing in scripts.find(SCRIPT_NAME):
         scripts.remove(existing)
     if not zoom_text_only(settings) or zoom_percent(settings) == 100:
         return
