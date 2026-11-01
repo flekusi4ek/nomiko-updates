@@ -30,7 +30,7 @@ def main():
     requested = launch_target(sys.argv[1:])
     if requested:
         # Windows invokes the registered browser with a URL as argument.
-        window.new_tab(requested)
+        window.open_url(requested)
     sys.exit(app.exec())
 
 if __name__ == '__main__':
