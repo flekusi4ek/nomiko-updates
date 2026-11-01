@@ -19,7 +19,7 @@ from .zoom_settings import ZOOM_LEVELS
 
 class SettingsPane(QWidget):
     CATEGORIES = ['General', 'Updates', 'Appearance', 'Home', 'Toolbar', 'Menu', 'Tabs', 'Bookmarks',
-                  'Search', 'Downloads', 'Privacy', 'Modules', 'Performance', 'Widgets', 'Account', 'Workspaces', 'Data & backup', 'Support', 'About']
+                  'Search', 'Downloads', 'Privacy', 'Modules', 'Performance', 'Widgets', 'Local profile', 'Workspaces', 'Data & backup', 'Support', 'About']
 
     def __init__(self, browser, parent=None):
         super().__init__(parent)
@@ -372,6 +372,8 @@ class SettingsPane(QWidget):
                 self._download_path_changed(path)
         box.addWidget(self.button('Choose folder', browse_folder))
         box.addWidget(self.button('Show downloads & history', self.browser.show_downloads))
+        box.addWidget(self.button('Open downloads folder', self.browser.open_download_folder))
+        box.addWidget(self.button('Clear download history (keep files)', self.browser.clear_download_history_only))
         self.note(box, 'The toolbar download icon appears only after a new download this session; it resets on restart. Saved download history stays available here and can be cleared without deleting files.')
 
         # PRIVACY
@@ -494,8 +496,8 @@ class SettingsPane(QWidget):
         self.widget_list.model().rowsMoved.connect(lambda *_: QTimer.singleShot(0, save_widgets))
         self.note(box, 'Weather calls Open-Meteo only when you press Check. Audio recording needs a microphone permission and is experimental.')
 
-        # ACCOUNT PLACEHOLDER
-        box = self.section('Account')
+        # ON-DEVICE PROFILE (NO ONLINE ACCOUNT)
+        box = self.section('Local profile')
         self.note(box, 'Account integration is NOT active. These optional fields stay on this device; no emails are sent and no registration occurs.')
         nickname = QLineEdit(str(s.get('account_nickname', '')))
         nickname.setMaxLength(48)
@@ -524,6 +526,7 @@ class SettingsPane(QWidget):
         box = self.section('Data & backup')
         self.note(box, 'Import / export Firefox-compatible bookmarks and back up local preferences. Passwords and cookies are intentionally excluded.')
         box.addWidget(self.button('Transfer bookmarks & backup', self.browser.show_transfer))
+        box.addWidget(self.button('Open local profile folder', self.browser.open_profile_folder))
         box.addWidget(self.button('Windows password vault', self.browser.show_password_vault))
         box.addWidget(self.button('Website permissions', self.browser.show_permissions_center))
         self.note(box, 'Signed updates are checked against NOMIKO’s built-in public key. Downloading updates sends a request to GitHub.')
