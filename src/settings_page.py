@@ -26,30 +26,29 @@ class SettingsPane(QWidget):
         self.browser = browser
         self._rebuild = False
         self.root = QHBoxLayout(self)
-        self.root.setContentsMargins(12, 10, 10, 10)
+        self.root.setContentsMargins(9, 8, 9, 8)
         self.root.setSpacing(8)
         self.pages = QStackedWidget(self)
         self.pages.setObjectName('settingsPages')
-        self.root.addWidget(self.pages, 1)
-
-        # Compact Firefox-inspired section rail, always on the RIGHT.
+        # Clear, compact left navigation; content stays in its own scroll pane.
         # 16 sections fit much more comfortably without a giant button per row.
         self.rail = QWidget(self)
         self.rail.setObjectName('settingsRail')
-        self.rail.setFixedWidth(168)
+        self.rail.setFixedWidth(186)
         rail_layout = QVBoxLayout(self.rail)
         rail_layout.setContentsMargins(7, 10, 5, 6)
         rail_layout.setSpacing(5)
-        rail_title = QLabel('NOMIKO  /  SETTINGS', self.rail)
+        self.rail_title = QLabel(self.t('NOMIKO settings'), self.rail)
+        rail_title = self.rail_title
         rail_title.setObjectName('railTitle')
         rail_title.setTextInteractionFlags(Qt.TextInteractionFlag.NoTextInteraction)
         rail_layout.addWidget(rail_title)
         self.category_filter = QLineEdit(self.rail)
         self.category_filter.setObjectName('settingsFilter')
-        self.category_filter.setPlaceholderText('Find a section…')
+        self.category_filter.setPlaceholderText(self.t('Search settings…'))
         self.category_filter.setClearButtonEnabled(True)
         self.category_filter.setFixedHeight(29)
-        self.category_filter.setToolTip('Filter settings sections by name')
+        self.category_filter.setToolTip(self.t('Search across all settings'))
         rail_layout.addWidget(self.category_filter)
         self.category_list = QListWidget(self.rail)
         self.category_list.setObjectName('settingsSidebar')
@@ -59,6 +58,7 @@ class SettingsPane(QWidget):
         self.category_list.setVerticalScrollMode(QAbstractItemView.ScrollMode.ScrollPerPixel)
         rail_layout.addWidget(self.category_list, 1)
         self.root.addWidget(self.rail, 0)
+        self.root.addWidget(self.pages, 1)
         self.category_filter.textChanged.connect(self.filter_categories)
         self.category_list.currentRowChanged.connect(self.pages.setCurrentIndex)
         self.rebuild()
@@ -70,8 +70,17 @@ class SettingsPane(QWidget):
         first_visible = -1
         for i in range(self.category_list.count()):
             item = self.category_list.item(i)
-            # Match both localized and English names (e.g. 'Privacy').
-            visible = not needle or needle in item.text().casefold() or needle in self.CATEGORIES[i].casefold()
+            # Search localized names AND each page's controls, not categories alone.
+            page = self.pages.widget(i)
+            content = self.CATEGORIES[i] + ' ' + item.text()
+            if needle and page is not None:
+                content += ' ' + ' '.join(
+                    widget.text() for widget in page.findChildren(
+                        (QLabel, QCheckBox, QPushButton))
+                    if hasattr(widget, 'text'))
+                content += ' ' + ' '.join(
+                    widget.placeholderText() for widget in page.findChildren(QLineEdit))
+            visible = not needle or needle in content.casefold()
             item.setHidden(not visible)
             if visible and first_visible < 0:
                 first_visible = i
@@ -142,8 +151,8 @@ class SettingsPane(QWidget):
 
     def button(self, title, click):
         w = QPushButton(self.t(title))
-        w.setMaximumWidth(200)
-        w.setMinimumHeight(28)
+        w.setMaximumWidth(260)
+        w.setMinimumHeight(30)
         w.setCursor(Qt.CursorShape.PointingHandCursor)
         w.setFocusPolicy(Qt.FocusPolicy.NoFocus)
         w.clicked.connect(click)
@@ -177,9 +186,13 @@ class SettingsPane(QWidget):
         self.row(box, 'Language', lang)
         def change_lang(_):
             self.set_preference(language=lang.currentData())
+            self.rail_title.setText(self.t('NOMIKO settings'))
+            self.category_filter.setPlaceholderText(self.t('Search settings…'))
             self.rebuild()
         lang.currentIndexChanged.connect(change_lang)
-        self.note(box, 'Translations are incomplete. Untranslated phrases appear in English.')
+        box.addWidget(self.button('Make NOMIKO default browser', self.browser.show_default_browser_settings))
+        self.note(box, 'Windows 11 → Apps → Default apps. Choose NOMIKO for HTTP, HTTPS and HTML. NOMIKO never changes defaults without permission.')
+        self.note(box, 'Translations are stored offline. Some secondary descriptions may still appear in English.')
         zoom = self.combo([(n, f'{n}%') for n in ZOOM_LEVELS], s.get('default_zoom', 100))
         zoom.currentIndexChanged.connect(
             lambda _: self.set_preference(default_zoom=zoom.currentData()))
@@ -193,7 +206,7 @@ class SettingsPane(QWidget):
         # UPDATES — locally stored preferences, verified GitHub releases.
         box = self.section('Updates')
         box.addWidget(self.button('Open Update Center', self.browser.show_update_center))
-        enabled = QCheckBox('Check for new versions automatically at startup')
+        enabled = QCheckBox(self.t('Check for new versions automatically at startup'))
         enabled.setChecked(s.get('updates_auto_check', True))
         enabled.toggled.connect(lambda state: self.set_preference(updates_auto_check=state))
         box.addWidget(enabled)
@@ -220,6 +233,15 @@ class SettingsPane(QWidget):
         ar.addWidget(reset_accent)
         self.row(box, 'Accent', accent_row)
         box.addWidget(self.button('Open Theme Studio 2.0', self.browser.show_theme_studio))
+        address_width = self.combo([('compact','Compact · 420 px'), ('balanced','Balanced · 610 px'),
+                                   ('wide','Wide · 820 px')], s.get('address_width', 'balanced'))
+        address_width.currentIndexChanged.connect(
+            lambda _: self.set_preference(address_width=address_width.currentData()))
+        self.row(box, 'Address bar width', address_width)
+        footer_visible = QCheckBox(self.t('Show bottom status bar'))
+        footer_visible.setChecked(s.get('show_footer', True))
+        footer_visible.toggled.connect(lambda enabled: self.set_preference(show_footer=enabled))
+        box.addWidget(footer_visible)
         self.note(box, 'Changes are applied and saved immediately. No Save button needed.')
         self.note(box, 'Surface transparency blends panels toward the NOMIKO background. It does not make the Windows desktop visible.')
         for key, title in [('toolbar', 'Toolbar transparency'), ('tabs', 'Tabs transparency'),
@@ -252,7 +274,7 @@ class SettingsPane(QWidget):
 
         # TOOLBAR
         box = self.section('Toolbar')
-        self.note(box, 'Drag items to rearrange; untick to hide. Windows controls stay accessible. Press Ctrl+, for Settings.')
+        self.note(box, 'Rearrange only essential controls. The private-window shortcut remains Ctrl+Shift+N; downloads appear only when used during this session.')
         self.toolbar_list = self._organizer(box, TOOLBAR_ITEMS, s.get('toolbar_order', TOOLBAR_ITEMS),
                                             s.get('toolbar_hidden', []), 'toolbar')
         box.addWidget(self.button('Set selected button color', self.pick_toolbar_color))
@@ -260,7 +282,7 @@ class SettingsPane(QWidget):
 
         # MAIN MENU
         box = self.section('Menu')
-        self.note(box, 'Reorder, hide or recolor entries in the NOMIKO menu. Ctrl+, always opens settings even if that entry is hidden.')
+        self.note(box, 'Only essential commands appear in the main menu. Secondary tools are grouped under Tools. You can reorder and hide these main commands.')
         self.menu_list = self._organizer(box, MENU_ITEMS, s.get('menu_order', MENU_ITEMS),
                                          s.get('menu_hidden', []), 'menu')
         box.addWidget(self.button('Set selected menu item color', self.pick_menu_color))
@@ -287,6 +309,11 @@ class SettingsPane(QWidget):
                               s.get('tab_position','top'))
         position.currentIndexChanged.connect(lambda _: self.set_preference(tab_position=position.currentData()))
         self.row(tab_box, 'Tab position', position)
+        density = self.combo([('slim','Slim'), ('comfortable','Comfortable')],
+                             s.get('tab_density', 'slim'))
+        density.currentIndexChanged.connect(
+            lambda _: self.set_preference(tab_density=density.currentData()))
+        self.row(tab_box, 'Horizontal tab height', density)
         labels = self.combo([('icon','Icon only'),('title','Title only'),('icon-and-title','Icon and title')],
                             s.get('tab_style','icon-and-title'))
         labels.currentIndexChanged.connect(lambda _: self.set_preference(tab_style=labels.currentData()))
@@ -345,7 +372,7 @@ class SettingsPane(QWidget):
                 self._download_path_changed(path)
         box.addWidget(self.button('Choose folder', browse_folder))
         box.addWidget(self.button('Show downloads & history', self.browser.show_downloads))
-        self.note(box, 'The downloads list is stored locally across restarts. Clearing the list will not delete files.')
+        self.note(box, 'The toolbar download icon appears only after a new download this session; it resets on restart. Saved download history stays available here and can be cleared without deleting files.')
 
         # PRIVACY
         box = self.section('Privacy')
@@ -508,7 +535,8 @@ class SettingsPane(QWidget):
 
         # ABOUT
         box = self.section('About')
-        self.note(box, 'NOMIKO v0.9.0 Alpha · independent Windows 11 browser. Its interface is created for NOMIKO; website rendering is powered by Qt WebEngine / Chromium.')
+        from .update_trust import CURRENT_VERSION
+        self.note(box, f'NOMIKO v{CURRENT_VERSION} Alpha · independent Windows 11 browser. Powered by Qt WebEngine / Chromium.')
         box.addWidget(self.button('Detailed information', self.browser.show_about))
 
         self.category_list.blockSignals(False)
