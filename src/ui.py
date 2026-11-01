@@ -1018,6 +1018,7 @@ class BrowserWindow(QMainWindow):
         # remaining navigation toolbar via Settings.
         self.window_controls = QWidget(toolbar)
         self.window_controls.setObjectName('windowControls')
+        self.window_controls.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed)
         control_row = QHBoxLayout(self.window_controls)
         control_row.setContentsMargins(0, 0, 0, 0)
         control_row.setSpacing(0)
@@ -1025,6 +1026,7 @@ class BrowserWindow(QMainWindow):
             control_row.addWidget(button)
         self.quick_controls = QWidget(toolbar)
         self.quick_controls.setObjectName('quickControls')
+        self.quick_controls.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed)
         quick_row = QHBoxLayout(self.quick_controls)
         quick_row.setContentsMargins(0, 0, 0, 0)
         quick_row.setSpacing(1)
@@ -1037,7 +1039,7 @@ class BrowserWindow(QMainWindow):
         self.download_btn = self._btn('download', 'Show downloads (Ctrl+J)', self.show_downloads_menu, size=(31, 31))
         self.download_btn.setObjectName('downloadMenu')
         # Session-only downloads icon; persistent download history lives in Settings.
-        bar.insertWidget(bar.indexOf(self.bookmark_btn), self.download_btn)
+        bar.addWidget(self.download_btn)  # _apply_toolbar places it per user order
         self._toolbar_widgets = dict(zip(TOOLBAR_ITEMS,
             [self.brand_btn, self.back_btn, self.next_btn, self.reload_btn, self.home_btn,
              self.address, self.download_btn, self.bookmark_btn, self.menu_btn]))
