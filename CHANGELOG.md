@@ -1,5 +1,12 @@
 # NOMIKO changelog
 
+## v0.9.8 Alpha
+- Reduced only the left navigation icon buttons to consistent 28×28 px hitboxes and centered their glyphs.
+- Centered the search/address field against the full browser window instead of free toolbar space, with overlap protection.
+- All right-side bookmark/menu/window-control buttons remain unchanged from v0.9.7.
+- Kept all other browser features, preferences and signed in-app updates unchanged.
+
+
 ## v0.9.7 Alpha
 - Fixed Windows controls accidentally placed on the left in v0.9.6.
 - Standard far-right order: Minimize / Maximize / Close.
