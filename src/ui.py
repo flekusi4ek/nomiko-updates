@@ -151,21 +151,18 @@ class IconButton(QToolButton):
             painter.drawLine(QPointF(x-6,y),QPointF(x+6,y))
             painter.drawLine(QPointF(x,y-6),QPointF(x,y+6))
         elif g == 'min':
-            # Narrow artwork, full original clickable region retained.
-            painter.drawLine(QPointF(x-6, y+1), QPointF(x+6, y+1))
+            painter.drawLine(QPointF(x-6, y), QPointF(x+6, y))
         elif g in ('max', 'restore'):
             if g == 'max':
-                painter.drawRect(int(x-6), int(y-5), 12, 10)
+                painter.drawRect(int(x-6), int(y-6), 12, 12)
             else:
-                painter.drawRect(int(x-5), int(y-3), 10, 9)
-                painter.drawLine(QPointF(x-3, y-6), QPointF(x+7, y-6))
-                painter.drawLine(QPointF(x+7, y-6), QPointF(x+7, y+2))
+                painter.drawRect(int(x-5), int(y-4), 10, 10)
+                painter.drawLine(QPointF(x-3, y-7), QPointF(x+7, y-7))
+                painter.drawLine(QPointF(x+7, y-7), QPointF(x+7, y+3))
         elif g in ('close', 'close-tab'):
-            # Glyph moves up, hit target stays the same.
-            offset = 1.5 if g == 'close' else 0
-            r = 5.4 if g == 'close' else 4.5
-            painter.drawLine(QPointF(x-r,y-r-offset),QPointF(x+r,y+r-offset))
-            painter.drawLine(QPointF(x+r,y-r-offset),QPointF(x-r,y+r-offset))
+            r = 6 if g == 'close' else 4.5
+            painter.drawLine(QPointF(x-r, y-r), QPointF(x+r, y+r))
+            painter.drawLine(QPointF(x+r, y-r), QPointF(x-r, y+r))
         elif g == 'brand':
             painter.translate(0, -2)
             painter.setPen(QPen(color))
@@ -968,8 +965,8 @@ class BrowserWindow(QMainWindow):
         toolbar = QWidget(self)
         toolbar.setObjectName('toolbar')
         bar = QHBoxLayout(toolbar)
-        bar.setContentsMargins(2, 1, 4, 1)
-        bar.setSpacing(1)
+        bar.setContentsMargins(4, 1, 0, 1)
+        bar.setSpacing(0)
         self._toolbar_layout = bar
 
         self.brand_btn = self._btn('brand', 'NOMIKO — New Tab', lambda: self.new_tab(), size=(36, 36))
@@ -989,7 +986,7 @@ class BrowserWindow(QMainWindow):
         self.address.setMaximumWidth({'compact': 420, 'balanced': 610, 'wide': 820}.get(
             self.store.settings.get('address_width', 'balanced'), 610))
         self.address.returnPressed.connect(self.navigate)
-        bar.addWidget(self.address, stretch=1)
+        bar.addWidget(self.address)
 
         # The former stray ◈ security label after the address field is gone.
         self.bookmark_btn = self._btn('star', 'Save / remove bookmark (Ctrl+D)', self.toggle_bookmark, size=(31, 31))
@@ -999,13 +996,17 @@ class BrowserWindow(QMainWindow):
 
         drag = DragArea(toolbar)
         drag.setObjectName('dragArea')
-        drag.setFixedSize(30, 30)
+        drag.setMinimumWidth(24)
+        drag.setFixedHeight(32)
+        drag.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
         drag.setToolTip('Drag window · Double-click to maximize')
-        bar.addWidget(drag)
+        bar.addWidget(drag, 1)
+        self.toolbar_drag = drag
 
-        self.minimize_btn = self._btn('min', 'Minimize', self.showMinimized, size=(23, 30))
-        self.maximize_btn = self._btn('max', 'Maximize', self.toggle_maximize, size=(26, 30))
-        self.close_btn = self._btn('close', 'Close NOMIKO', self.close, size=(32, 30))
+        # All Windows controls use exactly the same 36x32 hitbox.
+        self.minimize_btn = self._btn('min', 'Minimize', self.showMinimized, size=(36, 32))
+        self.maximize_btn = self._btn('max', 'Maximize', self.toggle_maximize, size=(36, 32))
+        self.close_btn = self._btn('close', 'Close NOMIKO', self.close, size=(36, 32))
         for button, name in (
             (self.minimize_btn, 'windowMin'),
             (self.maximize_btn, 'windowMax'),
@@ -1013,16 +1014,16 @@ class BrowserWindow(QMainWindow):
         ):
             button.setObjectName(name)
 
-        # Fixed left cluster: Close / Maximize / Minimize / Bookmark / Menu.
-        # These controls must stay grouped even when users rearrange the
-        # remaining navigation toolbar via Settings.
+        # Native Windows order at the extreme RIGHT: minimize / maximize / close.
+        # Bookmark and Menu sit immediately to their left. Never allow saved
+        # toolbar preferences to move any of these window controls.
         self.window_controls = QWidget(toolbar)
         self.window_controls.setObjectName('windowControls')
         self.window_controls.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed)
         control_row = QHBoxLayout(self.window_controls)
         control_row.setContentsMargins(0, 0, 0, 0)
         control_row.setSpacing(0)
-        for button in (self.close_btn, self.maximize_btn, self.minimize_btn):
+        for button in (self.minimize_btn, self.maximize_btn, self.close_btn):
             control_row.addWidget(button)
         self.quick_controls = QWidget(toolbar)
         self.quick_controls.setObjectName('quickControls')
@@ -1032,8 +1033,8 @@ class BrowserWindow(QMainWindow):
         quick_row.setSpacing(1)
         quick_row.addWidget(self.bookmark_btn)
         quick_row.addWidget(self.menu_btn)
-        bar.insertWidget(0, self.window_controls)
-        bar.insertWidget(1, self.quick_controls)
+        bar.addWidget(self.quick_controls)
+        bar.addWidget(self.window_controls)
         layout.addWidget(toolbar)
 
         self.download_btn = self._btn('download', 'Show downloads (Ctrl+J)', self.show_downloads_menu, size=(31, 31))
@@ -2159,18 +2160,18 @@ class BrowserWindow(QMainWindow):
         layout = self._toolbar_layout
         order = self.store.settings.get('toolbar_order', TOOLBAR_ITEMS)
         hidden = self.store.settings.get('toolbar_hidden', [])
-        # Bookmark and menu are anchored beside the left window controls;
-        # remaining buttons remain customizable and retain their order.
+        # Keep bookmarks/menu immediately beside the fixed far-right Windows
+        # controls, no matter how the user customizes the navigation buttons.
         anchored = ('bookmark', 'menu')
         for key in TOOLBAR_ITEMS:
             if key not in anchored:
                 layout.removeWidget(self._toolbar_widgets[key])
-        position = 2  # after Close/Maximize/Minimize and Bookmark/Menu clusters
+        position = 0
         for key in order:
             if key in anchored or key not in self._toolbar_widgets:
                 continue
             widget = self._toolbar_widgets[key]
-            layout.insertWidget(position, widget, 1 if key == 'address' else 0)
+            layout.insertWidget(position, widget)
             position += 1
             widget.setVisible(key not in hidden and (key != 'download' or bool(self.downloads)))
         for key in anchored:
@@ -2448,7 +2449,7 @@ class BrowserWindow(QMainWindow):
             QToolButton:hover {{background:{hover}}}
             QToolButton:disabled {{background:transparent;color:{muted}}}
             QToolButton#brand, QToolButton#brand:hover, QToolButton#brand:pressed {{background:transparent;border:0;border-radius:8px}}
-            QToolButton#windowMin, QToolButton#windowMax, QToolButton#windowClose {{border-radius:4px}}
+            QToolButton#windowMin, QToolButton#windowMax, QToolButton#windowClose {{border-radius:0px;padding:0;min-width:36px;max-width:36px;min-height:32px;max-height:32px}}
             QToolButton#windowClose:hover {{background:#C42B39}}
             QToolButton#tabClose {{background:transparent;border-radius:5px}}
             QToolButton#tabClose:hover {{background:{hover}}}
