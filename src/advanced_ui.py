@@ -15,6 +15,7 @@ from PySide6.QtWidgets import (
 from PySide6.QtWebEngineWidgets import QWebEngineView
 from PySide6.QtWebEngineCore import QWebEngineSettings
 from .zoom import apply_zoom_to_view
+from .theme_background import apply_page_background
 from .productivity import (
     parse_bookmarks_html, bookmarks_to_html, safe_web_url,
     export_backup, import_backup, normalized_workspaces,
@@ -309,6 +310,7 @@ class SplitPane(QWidget):
         self.view.nomiko_split_pane = self  # handled by NOMIKO's existing QWebEnginePage
         self.view.setProperty('nomiko_page', 'home')
         self.view.setPage(self.browser._make_split_page(self.view))
+        apply_page_background(self.view, self.browser.store.settings)
         self.view.settings().setAttribute(
             QWebEngineSettings.WebAttribute.JavascriptCanOpenWindows,
             not self.browser.store.settings.get('block_popups', True))
