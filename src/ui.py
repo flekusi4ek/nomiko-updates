@@ -1615,6 +1615,29 @@ class BrowserWindow(QMainWindow):
         menu.addAction(self.t('Make NOMIKO default browser'), self.show_default_browser_settings)
         menu.exec(self.menu_btn.mapToGlobal(self.menu_btn.rect().bottomLeft()))
 
+    def open_profile_folder(self):
+        """Open NOMIKO's local profile without exposing it to a website."""
+        APP_DIR.mkdir(parents=True, exist_ok=True)
+        QDesktopServices.openUrl(QUrl.fromLocalFile(str(APP_DIR)))
+
+    def open_download_folder(self):
+        """Use the selected downloads folder, with a safe fallback."""
+        folder = Path(self.store.settings.get('downloads_dir', str(Path.home() / 'Downloads'))).expanduser()
+        if not folder.is_dir():
+            folder = Path.home() / 'Downloads'
+        folder.mkdir(parents=True, exist_ok=True)
+        QDesktopServices.openUrl(QUrl.fromLocalFile(str(folder)))
+
+    def clear_download_history_only(self):
+        if QMessageBox.question(
+            self, self.t('Clear download history'),
+            self.t('Remove saved download records? Downloaded files will not be deleted.'),
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+            QMessageBox.StandardButton.No,
+        ) == QMessageBox.StandardButton.Yes:
+            self.store.clear_downloads()
+            self.status.setText(self.t('Download history cleared'))
+
     def show_default_browser_settings(self):
         if not open_windows_default_apps():
             QMessageBox.information(
