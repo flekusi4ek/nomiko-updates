@@ -1,5 +1,14 @@
 # NOMIKO changelog
 
+## v0.9.3 Alpha
+- Firefox-style Default zoom with website-wide preset levels from 50% to 300%.
+- Zoom text only, applying readable text font scaling rather than whole-page zoom.
+- Global zoom preferences update open websites and split-screen panes immediately.
+- Removed NOMIKO's automatic background-tab freezing and discarding across all performance profiles.
+- Existing bookmarks, saved tabs and profile data remain local and are preserved by the installer.
+- Signed GitHub alpha release for updating directly from NOMIKO v0.9.2.
+
+
 ## v0.9.2 Alpha
 - Home page: choose search providers using one small button at the left of the search field.
 - Hide the provider button automatically when only one provider is enabled.
