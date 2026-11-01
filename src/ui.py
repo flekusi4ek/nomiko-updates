@@ -30,6 +30,7 @@ from .home import render_home, render_search_results
 from .zoom import configure_zoom_script, apply_zoom_to_view
 from .zoom_settings import zoom_percent, zoom_text_only, ZOOM_LEVELS
 from .bookmark_visibility import has_bookmark_toolbar_content
+from .theme_background import page_background, apply_page_background
 from .windows_integration import open_windows_default_apps
 from .tab_drag import drop_index, neighbor_shift
 from .update_trust import CURRENT_VERSION
@@ -768,6 +769,8 @@ class NomikoPage(QWebEnginePage):
     def __init__(self, browser, view):
         super().__init__(browser.profile, view)
         self.browser, self.view = browser, view
+        # Set before navigation: Qt WebEngine otherwise paints a white frame.
+        self.setBackgroundColor(QColor(page_background(browser.store.settings)))
 
     def acceptNavigationRequest(self, url, navigation_type, is_main_frame):  # noqa: N802
         if url.host() == 'nomiko.invalid':
@@ -843,6 +846,7 @@ class BrowserView(QWebEngineView):
         self.setProperty('nomiko_page', '')
         self.setProperty('nomiko_search_query', '')
         self.setPage(NomikoPage(browser, self))
+        apply_page_background(self, browser.store.settings)
         self.page().permissionRequested.connect(browser.on_permission_requested)
         self.settings().setAttribute(QWebEngineSettings.WebAttribute.JavascriptCanOpenWindows,
             not browser.store.settings.get('block_popups', True))
@@ -863,6 +867,13 @@ class BrowserWindow(QMainWindow):
         self.private = private
         self.setWindowFlags(Qt.WindowType.Window | Qt.WindowType.FramelessWindowHint)
         self.store = Store()
+        # Prime the window palette before Qt shows even its first frame.
+        initial_bg = QColor(page_background(self.store.settings))
+        palette = self.palette()
+        palette.setColor(palette.ColorRole.Window, initial_bg)
+        palette.setColor(palette.ColorRole.Base, initial_bg)
+        self.setPalette(palette)
+        self.setAutoFillBackground(True)
         self.downloads = []
         self._pending_update = None
         self._update_center = None
@@ -957,8 +968,8 @@ class BrowserWindow(QMainWindow):
         toolbar = QWidget(self)
         toolbar.setObjectName('toolbar')
         bar = QHBoxLayout(toolbar)
-        bar.setContentsMargins(6, 1, 6, 1)
-        bar.setSpacing(2)
+        bar.setContentsMargins(2, 1, 4, 1)
+        bar.setSpacing(1)
         self._toolbar_layout = bar
 
         self.brand_btn = self._btn('brand', 'NOMIKO — New Tab', lambda: self.new_tab(), size=(36, 36))
@@ -992,16 +1003,35 @@ class BrowserWindow(QMainWindow):
         drag.setToolTip('Drag window · Double-click to maximize')
         bar.addWidget(drag)
 
-        self.minimize_btn = self._btn('min', 'Minimize', self.showMinimized, size=(34, 31))
-        self.maximize_btn = self._btn('max', 'Maximize', self.toggle_maximize, size=(40, 34))
-        self.close_btn = self._btn('close', 'Close NOMIKO', self.close, size=(40, 34))
+        self.minimize_btn = self._btn('min', 'Minimize', self.showMinimized, size=(23, 30))
+        self.maximize_btn = self._btn('max', 'Maximize', self.toggle_maximize, size=(26, 30))
+        self.close_btn = self._btn('close', 'Close NOMIKO', self.close, size=(32, 30))
         for button, name in (
             (self.minimize_btn, 'windowMin'),
             (self.maximize_btn, 'windowMax'),
             (self.close_btn, 'windowClose'),
         ):
             button.setObjectName(name)
-            bar.addWidget(button)
+
+        # Fixed left cluster: Close / Maximize / Minimize / Bookmark / Menu.
+        # These controls must stay grouped even when users rearrange the
+        # remaining navigation toolbar via Settings.
+        self.window_controls = QWidget(toolbar)
+        self.window_controls.setObjectName('windowControls')
+        control_row = QHBoxLayout(self.window_controls)
+        control_row.setContentsMargins(0, 0, 0, 0)
+        control_row.setSpacing(0)
+        for button in (self.close_btn, self.maximize_btn, self.minimize_btn):
+            control_row.addWidget(button)
+        self.quick_controls = QWidget(toolbar)
+        self.quick_controls.setObjectName('quickControls')
+        quick_row = QHBoxLayout(self.quick_controls)
+        quick_row.setContentsMargins(0, 0, 0, 0)
+        quick_row.setSpacing(1)
+        quick_row.addWidget(self.bookmark_btn)
+        quick_row.addWidget(self.menu_btn)
+        bar.insertWidget(0, self.window_controls)
+        bar.insertWidget(1, self.quick_controls)
         layout.addWidget(toolbar)
 
         self.download_btn = self._btn('download', 'Show downloads (Ctrl+J)', self.show_downloads_menu, size=(31, 31))
@@ -2127,14 +2157,22 @@ class BrowserWindow(QMainWindow):
         layout = self._toolbar_layout
         order = self.store.settings.get('toolbar_order', TOOLBAR_ITEMS)
         hidden = self.store.settings.get('toolbar_hidden', [])
+        # Bookmark and menu are anchored beside the left window controls;
+        # remaining buttons remain customizable and retain their order.
+        anchored = ('bookmark', 'menu')
         for key in TOOLBAR_ITEMS:
+            if key not in anchored:
+                layout.removeWidget(self._toolbar_widgets[key])
+        position = 2  # after Close/Maximize/Minimize and Bookmark/Menu clusters
+        for key in order:
+            if key in anchored or key not in self._toolbar_widgets:
+                continue
             widget = self._toolbar_widgets[key]
-            layout.removeWidget(widget)
-        for index, key in enumerate(order):
-            if key not in self._toolbar_widgets: continue
-            widget = self._toolbar_widgets[key]
-            layout.insertWidget(index, widget, 1 if key == 'address' else 0)
+            layout.insertWidget(position, widget, 1 if key == 'address' else 0)
+            position += 1
             widget.setVisible(key not in hidden and (key != 'download' or bool(self.downloads)))
+        for key in anchored:
+            self._toolbar_widgets[key].setVisible(key not in hidden)
 
     def _apply_bookmark_position(self):
         if not hasattr(self, 'bookmarks_rail'): return
@@ -2351,6 +2389,14 @@ class BrowserWindow(QMainWindow):
                     return True
         return super().eventFilter(obj, event)
 
+    def _canvas_palette(self, hex_color):
+        from PySide6.QtGui import QPalette
+        palette = self.palette()
+        color = QColor(hex_color)
+        palette.setColor(QPalette.ColorRole.Window, color)
+        palette.setColor(QPalette.ColorRole.Base, color)
+        return palette
+
     def apply_theme(self):
         settings = self.store.settings
         light = settings.get('theme') == 'light'
@@ -2381,6 +2427,15 @@ class BrowserWindow(QMainWindow):
         trans_bookmarks = layered_hex(surface, bg, opacity.get('bookmarks', 0))
         trans_settings = layered_hex(surface, bg, opacity.get('settings', 0))
         font_size = min(16, max(10, int(settings.get('theme_font_size', 12))))
+        # Sync the existing canvas immediately when a theme is changed.
+        self.setPalette(self._canvas_palette(bg))
+        for tab_index in range(self.tabs.count()):
+            tab = self.tabs.widget(tab_index)
+            if isinstance(tab, BrowserView):
+                apply_page_background(tab, settings)
+            elif isinstance(tab, SplitViewTab):
+                apply_page_background(tab.left, settings)
+                apply_page_background(tab.right, settings)
         self.setStyleSheet(f'''
             QMainWindow, QWidget {{background:{bg};color:{fg};font-family:"Segoe UI",Arial;font-size:{font_size}px}}
             QWidget#toolbar {{background:{trans_toolbar};border-bottom:1px solid {border}}}
