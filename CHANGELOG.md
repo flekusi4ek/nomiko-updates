@@ -1,6 +1,6 @@
 # NOMIKO changelog
 
-## v0.9.3 Alpha
+## v0.9.4 Alpha
 - Firefox-style Default zoom with website-wide preset levels from 50% to 300%.
 - Zoom text only, applying readable text font scaling rather than whole-page zoom.
 - Global zoom preferences update open websites and split-screen panes immediately.
