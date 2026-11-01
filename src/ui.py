@@ -30,6 +30,7 @@ from .home import render_home, render_search_results
 from .zoom import configure_zoom_script, apply_zoom_to_view
 from .zoom_settings import zoom_percent, zoom_text_only, ZOOM_LEVELS
 from .bookmark_visibility import has_bookmark_toolbar_content
+from .windows_integration import open_windows_default_apps
 from .tab_drag import drop_index, neighbor_shift
 from .update_trust import CURRENT_VERSION
 from .update_ui import UpdateCenter, UpdateWorker
@@ -48,7 +49,7 @@ from .storage import APP_DIR, SEARCH_ENGINES, Store, is_navigation_input, resolv
 
 class IconButton(QToolButton):
     """Consistent vector buttons. Glyph artwork can change without changing hitboxes."""
-    def __init__(self, glyph: str, tip: str, callback, size=(36, 36), parent=None):
+    def __init__(self, glyph: str, tip: str, callback, size=(31, 31), parent=None):
         super().__init__(parent)
         self.glyph = glyph
         self.glyph_color = '#9A82FF'
@@ -462,7 +463,7 @@ class BrowserTabs(QWidget):
         self.strip = QWidget(self)
         self.strip.setObjectName('tabStrip')
         self.line = QBoxLayout(QBoxLayout.Direction.LeftToRight, self.strip)
-        self.line.setContentsMargins(7, 2, 7, 2)
+        self.line.setContentsMargins(5, 1, 5, 1)
         self.line.setSpacing(4)
         self.bar = NomikoTabBar(self.strip)
         self.bar.setDocumentMode(True)
@@ -585,13 +586,24 @@ class BrowserTabs(QWidget):
         else:
             self.strip.setMinimumWidth(0)
             self.strip.setMaximumWidth(16777215)
-        self.strip.setMaximumHeight(16777215 if side else 38)
+        self.strip.setMaximumHeight(16777215 if side else 30)
         self.strip.setMinimumHeight(0)
-        self.plus.setFixedSize(36 if side else 30, 32 if side else 29)
+        self.plus.setFixedSize(36 if side else 27, 32 if side else 25)
         for widget in list(self._titles):
             self._update_label(widget)
         self.bar.updateGeometry()
         self.bar.update()
+        self._tab_width_timer.start(0)
+
+    def set_density(self, density):
+        """Compact top/bottom tabs; side tabs retain their own readable sizes."""
+        self._density = density if density in ('slim', 'comfortable') else 'slim'
+        if self._position not in ('left', 'right'):
+            slim = self._density == 'slim'
+            self.strip.setMaximumHeight(29 if slim else 37)
+            self.plus.setFixedSize(26 if slim else 30, 24 if slim else 30)
+            self.line.setContentsMargins(5, 1 if slim else 2, 5, 1 if slim else 2)
+        self.bar.updateGeometry()
         self._tab_width_timer.start(0)
 
     def set_side_width(self, width):
@@ -945,40 +957,42 @@ class BrowserWindow(QMainWindow):
         toolbar = QWidget(self)
         toolbar.setObjectName('toolbar')
         bar = QHBoxLayout(toolbar)
-        bar.setContentsMargins(8, 2, 6, 2)
-        bar.setSpacing(4)
+        bar.setContentsMargins(6, 1, 6, 1)
+        bar.setSpacing(2)
         self._toolbar_layout = bar
 
         self.brand_btn = self._btn('brand', 'NOMIKO — New Tab', lambda: self.new_tab(), size=(36, 36))
         self.brand_btn.setObjectName('brand')
-        self.back_btn = self._btn('back', 'Back (Alt+Left)', self.go_back, size=(38, 36))
+        self.back_btn = self._btn('back', 'Back (Alt+Left)', self.go_back, size=(31, 31))
         self.next_btn = self._btn('forward', 'Forward (Alt+Right)', self.go_forward, size=(38, 36))
         self.reload_btn = self._btn('reload', 'Reload (Ctrl+R)', self.reload_page, size=(38, 36))
-        self.home_btn = self._btn('home', 'Home', self.go_home, size=(35, 36))
+        self.home_btn = self._btn('home', 'Home', self.go_home, size=(31, 31))
         for button in (self.brand_btn, self.back_btn, self.next_btn, self.reload_btn, self.home_btn):
             bar.addWidget(button)
 
         self.address = QLineEdit()
         self.address.setObjectName('address')
         self.address.setPlaceholderText('Search or enter a website...')
-        self.address.setFixedHeight(34)
+        self.address.setFixedHeight(29)
+        self.address.setMinimumWidth(180)
+        self.address.setMaximumWidth({'compact': 420, 'balanced': 610, 'wide': 820}.get(
+            self.store.settings.get('address_width', 'balanced'), 610))
         self.address.returnPressed.connect(self.navigate)
         bar.addWidget(self.address, stretch=1)
 
         # The former stray ◈ security label after the address field is gone.
-        self.bookmark_btn = self._btn('star', 'Save / remove bookmark (Ctrl+D)', self.toggle_bookmark, size=(34, 36))
-        self.private_btn = self._btn('private', 'Open private window (Ctrl+Shift+N)', self.open_private, size=(34, 36))
-        self.menu_btn = self._btn('menu', 'NOMIKO menu', self.show_main_menu, size=(34, 36))
-        for button in (self.bookmark_btn, self.private_btn, self.menu_btn):
+        self.bookmark_btn = self._btn('star', 'Save / remove bookmark (Ctrl+D)', self.toggle_bookmark, size=(31, 31))
+        self.menu_btn = self._btn('menu', 'NOMIKO menu', self.show_main_menu, size=(31, 31))
+        for button in (self.bookmark_btn, self.menu_btn):
             bar.addWidget(button)
 
         drag = DragArea(toolbar)
         drag.setObjectName('dragArea')
-        drag.setFixedSize(46, 34)
+        drag.setFixedSize(30, 30)
         drag.setToolTip('Drag window · Double-click to maximize')
         bar.addWidget(drag)
 
-        self.minimize_btn = self._btn('min', 'Minimize', self.showMinimized, size=(40, 34))
+        self.minimize_btn = self._btn('min', 'Minimize', self.showMinimized, size=(34, 31))
         self.maximize_btn = self._btn('max', 'Maximize', self.toggle_maximize, size=(40, 34))
         self.close_btn = self._btn('close', 'Close NOMIKO', self.close, size=(40, 34))
         for button, name in (
@@ -990,13 +1004,13 @@ class BrowserWindow(QMainWindow):
             bar.addWidget(button)
         layout.addWidget(toolbar)
 
-        self.download_btn = self._btn('download', 'Show downloads (Ctrl+J)', self.show_downloads_menu, size=(34, 36))
+        self.download_btn = self._btn('download', 'Show downloads (Ctrl+J)', self.show_downloads_menu, size=(31, 31))
         self.download_btn.setObjectName('downloadMenu')
-        # Place directly after the address field, before bookmark and private controls.
+        # Session-only downloads icon; persistent download history lives in Settings.
         bar.insertWidget(bar.indexOf(self.bookmark_btn), self.download_btn)
         self._toolbar_widgets = dict(zip(TOOLBAR_ITEMS,
             [self.brand_btn, self.back_btn, self.next_btn, self.reload_btn, self.home_btn,
-             self.address, self.download_btn, self.bookmark_btn, self.private_btn, self.menu_btn]))
+             self.address, self.download_btn, self.bookmark_btn, self.menu_btn]))
 
         self.tabs = BrowserTabs(lambda: self.new_tab())
         self.tabs.setObjectName('tabs')
@@ -1006,6 +1020,7 @@ class BrowserWindow(QMainWindow):
         self.tabs.configure(self.store.settings.get('tab_position','top'),
                             self.store.settings.get('tab_style','icon-and-title'),
                             self.store.settings.get('sidebar_style','expanded'))
+        self.tabs.set_density(self.store.settings.get('tab_density', 'slim'))
         self.tabs.tabCloseRequested.connect(self.close_tab)
         self.tabs.tabPinRequested.connect(self.toggle_pin_tab)
         self.tabs.tabGroupRequested.connect(self.group_tab)
@@ -1026,7 +1041,9 @@ class BrowserWindow(QMainWindow):
         self._apply_toolbar()
 
         footer = QWidget()
+        self.footer = footer
         footer.setObjectName('footer')
+        footer.setVisible(self.store.settings.get('show_footer', True))
         footer_layout = QHBoxLayout(footer)
         footer_layout.setContentsMargins(12, 3, 12, 3)
         self.status = QLabel('Ready')
@@ -1500,6 +1517,7 @@ class BrowserWindow(QMainWindow):
         request.setDownloadFileName(path.name)
         request.accept()
         self.downloads.append(request)
+        self.download_btn.setVisible('download' not in self.store.settings.get('toolbar_hidden', []))
         history_id = None if self.private else self.store.record_download(
             str(path), request.url().toString())
         if history_id:
@@ -1558,78 +1576,50 @@ class BrowserWindow(QMainWindow):
             view.setZoomFactor(min(3.0, max(0.5, view.zoomFactor() + delta)))
 
     def show_main_menu(self):
+        """Compact native menu; secondary tools are grouped, not duplicated."""
         menu = QMenu(self)
-        picker = QWidget(menu)
-        picker.setObjectName('searchPicker')
-        picker_row = QHBoxLayout(picker)
-        picker_row.setContentsMargins(10, 8, 10, 8)
-        picker_row.setSpacing(8)
-        search_icon = QLabel('⌕', picker)
-        search_icon.setObjectName('searchPickerIcon')
-        picker_row.addWidget(search_icon)
-        engine_picker = QComboBox(picker)
-        engine_picker.setObjectName('searchPickerCombo')
-        engine_picker.setToolTip('Default search engine for the address bar and new tab')
-        enabled = self.store.settings.get('visible_engines', ['DuckDuckGo','NOMIKO Search','Google'])
-        for engine in enabled: engine_picker.addItem(engine)
-        engine_picker.setCurrentText(self.store.settings.get('search_engine', 'DuckDuckGo'))
-        picker_row.addWidget(engine_picker, 1)
-        engine_picker.currentTextChanged.connect(
-            lambda engine: self.update_preference(search_engine=engine))
-        picker_action = QWidgetAction(menu)
-        picker_action.setDefaultWidget(picker)
-        menu.addAction(picker_action)
-        menu.addSeparator()
+        menu.setObjectName('nomikoMainMenu')
+        menu.setMinimumWidth(235)
         handlers = {
-            'new_tab': (self.t('New tab'), lambda: self.new_tab()),
-            'private_window': (self.t('New private window'), self.open_private),
+            'new_tab': (self.t('New tab') + '    Ctrl+T', lambda: self.new_tab()),
             'bookmarks': (self.t('Bookmarks'), self.show_bookmarks),
-            'history': (self.t('History'), self.show_history),
-            'downloads': (self.t('Downloads'), self.show_downloads),
-            'settings': (self.t('Settings'), self.show_settings),
-            'modules': ('Protection modules', self.show_modules),
-            'clear_data': (self.t('Clear browsing data'), self.clear_browsing_data),
+            'history': (self.t('History') + '    Ctrl+H', self.show_history),
+            'downloads': (self.t('Downloads') + '    Ctrl+J', self.show_downloads),
+            'settings': (self.t('Settings') + '    Ctrl+,', self.show_settings),
             'about': (self.t('About NOMIKO'), self.show_about),
         }
-        hidden = self.store.settings.get('menu_hidden', [])
         colors = self.store.settings.get('menu_colors', {})
+        hidden = self.store.settings.get('menu_hidden', [])
         for key in self.store.settings.get('menu_order', MENU_ITEMS):
-            if key not in handlers or key in hidden: continue
-            title, callback = handlers[key]
-            action = QWidgetAction(menu)
-            btn = QPushButton(title, menu)
-            btn.setFixedSize(225, 32)
-            btn.setCursor(Qt.CursorShape.PointingHandCursor)
-            btn.setObjectName('nomikoMenuItem')
+            if key not in handlers or key in hidden:
+                continue
+            label, callback = handlers[key]
+            action = menu.addAction(label, callback)
             tint = colors.get(key)
-            if tint and QColor(tint).isValid():
-                btn.setStyleSheet(f'QPushButton#nomikoMenuItem {{ color:{tint};text-align:left;padding-left:12px; }}')
-            else:
-                btn.setStyleSheet('QPushButton#nomikoMenuItem { text-align:left;padding-left:12px; }')
-            def run(checked=False, cb=callback):
-                menu.close()
-                cb()
-            btn.clicked.connect(run)
-            action.setDefaultWidget(btn)
-            menu.addAction(action)
+            if isinstance(tint, str) and QColor(tint).isValid():
+                action.setIcon(self._nomiko_icon())
+            if key in ('new_tab', 'downloads'):
+                menu.addSeparator()
         menu.addSeparator()
-        tools = menu.addMenu('NOMIKO tools')
-        for name, cb in [
+        tools = menu.addMenu(self.t('Tools'))
+        for name, callback in [
             ('Find open tab…', self.find_open_tab),
-            ('Workspaces…', self.show_workspaces),
             ('Split View…', self.open_split_view),
+            ('Workspaces…', self.show_workspaces),
             ('Reading mode', self.open_reader_mode),
-            ('Picture-in-Picture (experimental)', self.request_picture_in_picture),
-            ('Transfer & backups…', self.show_transfer),
-            ('Windows password vault…', self.show_password_vault),
-            ('Privacy / site permissions…', self.show_permissions_center),
-            ('Performance monitor', self.show_performance_monitor),
             ('Theme Studio', self.show_theme_studio),
-            ('NOMIKO Updates…', self.show_update_center),
-            ('Import local blocklist…', self.import_local_blocklist),
+            ('Update Center', self.show_update_center),
+            ('New private window', self.open_private),
         ]:
-            tools.addAction(name, cb)
+            tools.addAction(self.t(name), callback)
+        menu.addAction(self.t('Make NOMIKO default browser'), self.show_default_browser_settings)
         menu.exec(self.menu_btn.mapToGlobal(self.menu_btn.rect().bottomLeft()))
+
+    def show_default_browser_settings(self):
+        if not open_windows_default_apps():
+            QMessageBox.information(
+                self, self.t('Default browser'),
+                self.t('Open Windows Settings → Apps → Default apps, select NOMIKO and choose HTTP and HTTPS.'))
 
     def toggle_pin_tab(self, index):
         if index < 0 or index >= self.tabs.count(): return
@@ -2066,13 +2056,21 @@ class BrowserWindow(QMainWindow):
                 win.tabs.configure(win.store.settings.get('tab_position','top'),
                                    win.store.settings.get('tab_style','icon-and-title'),
                                    win.store.settings.get('sidebar_style','expanded'))
+                win.tabs.set_density(win.store.settings.get('tab_density', 'slim'))
+            if 'tab_density' in changed:
+                win.tabs.set_density(win.store.settings.get('tab_density', 'slim'))
+            if 'address_width' in changed:
+                win.address.setMaximumWidth({'compact':420, 'balanced':610, 'wide':820}.get(
+                    win.store.settings.get('address_width'), 610))
+            if 'show_footer' in changed:
+                win.footer.setVisible(bool(win.store.settings.get('show_footer', True)))
             if changed & {'toolbar_order', 'toolbar_hidden'}:
                 win._apply_toolbar()
             if changed & {'bookmark_bar_visible', 'bookmark_position'}:
                 win._apply_bookmark_position()
             if changed & {'theme', 'accent', 'toolbar_colors', 'tab_position', 'tab_style',
                           'sidebar_style', 'bookmark_bar_visible', 'bookmark_position',
-                          'interface_transparency', 'theme_font_size'}:
+                          'interface_transparency', 'theme_font_size', 'tab_density'}:
                 win.apply_theme()
             if 'language' in changed:
                 win._translate_chrome()
@@ -2113,7 +2111,7 @@ class BrowserWindow(QMainWindow):
             if key not in self._toolbar_widgets: continue
             widget = self._toolbar_widgets[key]
             layout.insertWidget(index, widget, 1 if key == 'address' else 0)
-            widget.setVisible(key not in hidden)
+            widget.setVisible(key not in hidden and (key != 'download' or bool(self.downloads)))
 
     def _apply_bookmark_position(self):
         if not hasattr(self, 'bookmarks_rail'): return
@@ -2143,7 +2141,7 @@ class BrowserWindow(QMainWindow):
             (self.brand_btn,'New tab'),(self.back_btn,'Back'),
             (self.next_btn,'Forward'),(self.reload_btn,'Reload'),
             (self.home_btn,'Home'),(self.bookmark_btn,'Bookmark'),
-            (self.download_btn,'Downloads'),(self.private_btn,'Private window'),
+            (self.download_btn,'Downloads'),
             (self.menu_btn,'Menu'),(self.minimize_btn,'Minimize'),
             (self.maximize_btn,'Maximize'),(self.close_btn,'Close'),
             (self.tabs.plus,'New tab'),
@@ -2376,10 +2374,10 @@ class BrowserWindow(QMainWindow):
             QToolButton:pressed {{background:{selected}}}
             QToolButton#brand:hover, QToolButton#brand:pressed {{background:transparent;border:0}}
             QAbstractButton {{selection-color:{fg};selection-background-color:transparent}}
-            QLineEdit#address {{background:{surface2};color:{fg};border:1px solid {border};border-radius:9px;padding:5px 12px;font-size:13px;selection-background-color:{a}}}
+            QLineEdit#address {{background:{surface2};color:{fg};border:1px solid {border};border-radius:7px;padding:3px 10px;font-size:12px;selection-background-color:{a}}}
             QLineEdit#address:focus {{border:1px solid {a}}}
             QTabBar {{background:{trans_tabs};border:0}}
-            QTabBar::tab {{background:{surface};border:0;color:{fg};padding:6px 10px;min-width:62px;max-width:200px;border-radius:7px;margin:2px}}
+            QTabBar::tab {{background:{surface};border:0;color:{fg};padding:{'3px 8px' if settings.get('tab_density', 'slim') == 'slim' else '6px 10px'};min-width:56px;max-width:190px;border-radius:6px;margin:1px}}
             QTabBar::close-button {{subcontrol-position:right;margin-left:0px;margin-right:6px}}
             QTabBar::tab:selected {{background:{selected};border-bottom:2px solid {a}}}
             QTabBar::tab:!selected {{border:0}}
@@ -2416,7 +2414,9 @@ class BrowserWindow(QMainWindow):
             QLineEdit, QComboBox, QListWidget {{background:{surface2};color:{fg};border:1px solid {border};border-radius:7px;padding:5px}}
             QLineEdit:focus, QComboBox:focus {{border:1px solid {a}}}
             QDialog, QMenu {{background:{surface};color:{fg}}}
+            QMenu::item {{padding:7px 16px;border-radius:5px;margin:2px 5px}}
             QMenu::item:selected {{background:{selected};color:{fg}}}
+            QMenu::separator {{height:1px;background:{border};margin:5px 9px}}
             QListWidget::item:selected {{background:{selected};color:{fg}}}
             QWidget#searchPicker {{background:{surface};border-radius:8px}}
             QLabel#searchPickerIcon {{font-size:22px;color:{ink}}}
