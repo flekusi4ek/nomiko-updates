@@ -1,5 +1,13 @@
 # NOMIKO changelog
 
+## v0.9.6 Alpha
+- Far-left window controls: Close 32px, Maximize 26px, Minimize 23px.
+- Bookmark and Menu buttons grouped directly next to Minimize.
+- Theme-colored native window and WebEngine canvases before first paint; avoids white flashes on opening new windows/tabs.
+- Split views and private windows also start using the chosen theme color.
+- Updated the release owner after the developer account rename.
+
+
 ## v0.9.5 Alpha
 - Registered NOMIKO in Windows 11 Default Apps for HTTP, HTTPS, HTML and HTM.
 - Compact minimalist top navigation, shorter adjustable address bar and thinner horizontal tabs.

@@ -44,7 +44,7 @@ class SignedUpdateTests(unittest.TestCase):
         raw, sig = self.signed()
         release = updater.verify_manifest(raw, sig, expected_tag='v0.9.1-alpha')
         self.assertEqual(release.version, '0.9.1')
-        self.assertEqual(release.download_url, 'https://github.com/flekideveloper/nomiko-updates/releases/download/v0.9.1-alpha/NOMIKO-Setup-0.9.1-alpha.exe')
+        self.assertEqual(release.download_url, 'https://github.com/flekusi4ek/nomiko-updates/releases/download/v0.9.1-alpha/NOMIKO-Setup-0.9.1-alpha.exe')
 
     def test_tampering_rejected(self):
         raw, sig = self.signed()

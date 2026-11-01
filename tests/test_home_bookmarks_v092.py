@@ -1,4 +1,4 @@
-"""Regression checks for the NOMIKO v0.9.5 search chooser and bookmark rail."""
+"""Regression checks for the NOMIKO v0.9.6 search chooser and bookmark rail."""
 import unittest
 from pathlib import Path
 
@@ -55,5 +55,5 @@ class BookmarkRailTests(unittest.TestCase):
 
     def test_update_version(self):
         from src.update_trust import CURRENT_VERSION
-        self.assertEqual(CURRENT_VERSION, '0.9.5')
-        self.assertEqual((ROOT / '.github/release-request.txt').read_text().strip(), 'PUBLISH v0.9.5-alpha')
+        self.assertEqual(CURRENT_VERSION, '0.9.6')
+        self.assertEqual((ROOT / '.github/release-request.txt').read_text().strip(), 'PUBLISH v0.9.6-alpha')
