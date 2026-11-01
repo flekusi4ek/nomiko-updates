@@ -13,7 +13,7 @@ from urllib.parse import parse_qs, quote_plus
 import json
 
 from PySide6.QtCore import QEvent, QPoint, QPointF, QTimer, QUrl, Qt, QSize, Signal, QRect, QRectF
-from PySide6.QtGui import QAction, QColor, QDesktopServices, QIcon, QKeySequence, QPainter, QPainterPath, QPen, QPolygonF, QPixmap, QImageReader
+from PySide6.QtGui import QAction, QColor, QDesktopServices, QIcon, QKeySequence, QPainter, QPainterPath, QPen, QPolygonF, QPixmap, QImageReader, QPalette
 from PySide6.QtWidgets import (
     QSizePolicy,
     QApplication, QBoxLayout, QCheckBox, QColorDialog, QComboBox, QDialog, QDialogButtonBox,
@@ -870,8 +870,8 @@ class BrowserWindow(QMainWindow):
         # Prime the window palette before Qt shows even its first frame.
         initial_bg = QColor(page_background(self.store.settings))
         palette = self.palette()
-        palette.setColor(palette.ColorRole.Window, initial_bg)
-        palette.setColor(palette.ColorRole.Base, initial_bg)
+        palette.setColor(QPalette.ColorRole.Window, initial_bg)
+        palette.setColor(QPalette.ColorRole.Base, initial_bg)
         self.setPalette(palette)
         self.setAutoFillBackground(True)
         self.downloads = []
