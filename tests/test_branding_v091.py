@@ -18,6 +18,6 @@ class TestNomikoWindowsBrand(unittest.TestCase):
         self.assertIn('--add-data', workflow)
     def test_release_version(self):
         from src.update_trust import CURRENT_VERSION
-        self.assertEqual(CURRENT_VERSION, '0.9.2')
-        self.assertIn('NOMIKO-Setup-0.9.2-alpha.exe', (ROOT / 'installer/NOMIKO.nsi').read_text())
-        self.assertEqual((ROOT / '.github/release-request.txt').read_text().strip(), 'PUBLISH v0.9.2-alpha')
+        self.assertEqual(CURRENT_VERSION, '0.9.3')
+        self.assertIn('NOMIKO-Setup-0.9.3-alpha.exe', (ROOT / 'installer/NOMIKO.nsi').read_text())
+        self.assertEqual((ROOT / '.github/release-request.txt').read_text().strip(), 'PUBLISH v0.9.3-alpha')
