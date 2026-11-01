@@ -2,10 +2,12 @@
 from pathlib import Path
 import os
 import sys
-from PySide6.QtGui import QIcon
+from PySide6.QtGui import QIcon, QColor, QPalette
 from PySide6.QtWidgets import QApplication
 from src.ui import BrowserWindow
 from src.windows_integration import launch_target
+from src.storage import Store
+from src.theme_background import page_background
 
 def icon_path() -> Path:
     bundle = Path(getattr(sys, '_MEIPASS', Path(__file__).resolve().parent))
@@ -19,6 +21,13 @@ def main():
         except (AttributeError, OSError):
             pass
     app = QApplication(sys.argv)
+    # Set the native window background before constructing/showing BrowserWindow:
+    # avoids a white Win11/Qt flash while WebEngine initializes.
+    initial_bg = QColor(page_background(Store().settings))
+    palette = app.palette()
+    palette.setColor(QPalette.ColorRole.Window, initial_bg)
+    palette.setColor(QPalette.ColorRole.Base, initial_bg)
+    app.setPalette(palette)
     app.setApplicationName('NOMIKO')
     app.setOrganizationName('NOMIKO')
     app.setWindowIcon(QIcon(str(icon_path())))
