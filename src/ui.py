@@ -2441,6 +2441,7 @@ class BrowserWindow(QMainWindow):
         self.setStyleSheet(f'''
             QMainWindow, QWidget {{background:{bg};color:{fg};font-family:"Segoe UI",Arial;font-size:{font_size}px}}
             QWidget#toolbar {{background:{trans_toolbar};border-bottom:1px solid {border}}}
+            QWidget#windowControls, QWidget#quickControls {{background:transparent;border:0}}
             QWidget#tabStrip {{background:{trans_tabs};border-bottom:1px solid {border}}}
             QWidget#dragArea {{background:{surface};border:0}}
             QToolButton {{color:{fg};background:transparent;border:0;border-radius:7px;padding:0;min-width:0;min-height:0}}
