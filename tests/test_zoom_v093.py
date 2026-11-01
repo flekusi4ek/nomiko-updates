@@ -3,7 +3,7 @@ import unittest
 from pathlib import Path
 
 from src.zoom_settings import ZOOM_LEVELS, zoom_percent, zoom_text_only
-from src.zoom import text_zoom_javascript
+from src.zoom import text_zoom_javascript, configure_zoom_script, SCRIPT_NAME
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -28,6 +28,30 @@ class ZoomSettingsTests(unittest.TestCase):
         self.assertTrue(zoom_text_only({'zoom_text_only': True}))
         for value in (False, None, 'true', 1):
             self.assertFalse(zoom_text_only({'zoom_text_only': value}))
+
+    def test_qt_profile_script_collection_api(self):
+        class Collection:
+            def __init__(self):
+                self.items = []
+            def find(self, name):
+                return [s for s in self.items if s.name() == name]
+            def remove(self, script):
+                self.items.remove(script)
+            def insert(self, script):
+                self.items.append(script)
+        class Profile:
+            def __init__(self):
+                self.collection = Collection()
+            def scripts(self):
+                return self.collection
+        profile = Profile()
+        configure_zoom_script(profile, {'default_zoom': 150, 'zoom_text_only': True})
+        self.assertEqual(len(profile.collection.items), 1)
+        self.assertEqual(profile.collection.items[0].name(), SCRIPT_NAME)
+        configure_zoom_script(profile, {'default_zoom': 125, 'zoom_text_only': True})
+        self.assertEqual(len(profile.collection.items), 1)
+        configure_zoom_script(profile, {'default_zoom': 100, 'zoom_text_only': False})
+        self.assertEqual(len(profile.collection.items), 0)
 
     def test_text_zoom_is_reversible(self):
         active = text_zoom_javascript(150, True)
