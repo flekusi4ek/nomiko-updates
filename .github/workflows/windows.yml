@@ -9,6 +9,11 @@ on:
 permissions:
   contents: read
 
+# Only the newest push should publish a signed release for this branch.
+concurrency:
+  group: nomiko-windows-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   windows:
     runs-on: windows-2022
