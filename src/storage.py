@@ -21,9 +21,9 @@ WIDGET_DATA_FILE = APP_DIR / 'widgets.json'
 DOWNLOADS_FILE = APP_DIR / 'downloads.json'
 WORKSPACES_FILE = APP_DIR / 'workspaces.json'
 
-TOOLBAR_ITEMS = ['brand', 'back', 'forward', 'reload', 'home', 'address', 'download', 'bookmark', 'private', 'menu']
+TOOLBAR_ITEMS = ['brand', 'back', 'forward', 'reload', 'home', 'address', 'download', 'bookmark', 'menu']
 HOME_ITEMS = ['logo', 'kicker', 'title', 'subtitle', 'search', 'bookmarks']
-MENU_ITEMS = ['new_tab', 'private_window', 'bookmarks', 'history', 'downloads', 'settings', 'modules', 'clear_data', 'about']
+MENU_ITEMS = ['new_tab', 'bookmarks', 'history', 'downloads', 'settings', 'about']
 
 DEFAULT_SETTINGS = {
     'theme': 'dark',  # Graphite grey default. 'midnight' is darker.
@@ -47,6 +47,9 @@ DEFAULT_SETTINGS = {
     'tab_position': 'top',
     'tab_style': 'icon-and-title',
     'sidebar_style': 'expanded',
+    'tab_density': 'slim',
+    'address_width': 'balanced',
+    'show_footer': True,
     'restore_tabs': False,
     'save_history': True,
     'bookmark_position': 'top',
@@ -160,6 +163,11 @@ class Store:
             self.settings['tab_position'] = 'top'
         if self.settings.get('tab_style') not in ('icon', 'title', 'icon-and-title'):
             self.settings['tab_style'] = 'icon-and-title'
+        if self.settings.get('tab_density') not in ('slim', 'comfortable'):
+            self.settings['tab_density'] = 'slim'
+        if self.settings.get('address_width') not in ('compact', 'balanced', 'wide'):
+            self.settings['address_width'] = 'balanced'
+        self.settings['show_footer'] = self.settings.get('show_footer', True) is True
         if self.settings.get('sidebar_style') not in ('icon', 'expanded'):
             self.settings['sidebar_style'] = 'expanded'
         self.settings['save_history'] = self.settings.get('save_history', True) is True
