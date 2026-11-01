@@ -65,7 +65,7 @@ class NomikoV05Tests(unittest.TestCase):
         self.store.settings.update({
             'bookmark_position':'right', 'bookmark_bar_visible':True,
             'toolbar_order':list(reversed(storage.TOOLBAR_ITEMS)),
-            'toolbar_hidden':['brand','private'],
+            'toolbar_hidden':['brand'],
             'home_hidden':['kicker'],
             'sidebar_width':283,
             'account_nickname':'Test user',
@@ -76,7 +76,7 @@ class NomikoV05Tests(unittest.TestCase):
         self.assertEqual(loaded['bookmark_position'],'right')
         self.assertEqual(loaded['sidebar_width'],283)
         self.assertEqual(loaded['toolbar_order'][0],'menu')
-        self.assertEqual(loaded['toolbar_hidden'],['brand','private'])
+        self.assertEqual(loaded['toolbar_hidden'],['brand'])
         self.assertEqual(loaded['account_nickname'],'Test user')
 
 
