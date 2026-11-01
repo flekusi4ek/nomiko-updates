@@ -75,9 +75,9 @@ class SettingsPane(QWidget):
             content = self.CATEGORIES[i] + ' ' + item.text()
             if needle and page is not None:
                 content += ' ' + ' '.join(
-                    widget.text() for widget in page.findChildren(
-                        (QLabel, QCheckBox, QPushButton))
-                    if hasattr(widget, 'text'))
+                    widget.text()
+                    for cls in (QLabel, QCheckBox, QPushButton)
+                    for widget in page.findChildren(cls))
                 content += ' ' + ' '.join(
                     widget.placeholderText() for widget in page.findChildren(QLineEdit))
             visible = not needle or needle in content.casefold()
@@ -398,7 +398,7 @@ class SettingsPane(QWidget):
             ('warn_insecure_websites', 'Warn when entering unencrypted HTTP websites'),
             ('warn_suspicious_domains', 'Warn about Punycode / internationalized domains'),
         ]:
-            control = QCheckBox(title)
+            control = QCheckBox(self.t(title))
             control.setChecked(s.get(key, True))
             control.toggled.connect(lambda value, k=key: self.set_preference(**{k:value}))
             box.addWidget(control)
@@ -420,7 +420,7 @@ class SettingsPane(QWidget):
             ('autoplay_guard', 'Autoplay Guard · require user gesture', 'Asks sites to wait for a click before playing audio/video.'),
         )
         for key, title, explanation in options:
-            option = QCheckBox(title)
+            option = QCheckBox(self.t(title))
             option.setChecked(s.get(key, True))
             option.toggled.connect(lambda value, k=key: self.set_preference(**{k:value}))
             box.addWidget(option)
