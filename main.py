@@ -5,6 +5,7 @@ import sys
 from PySide6.QtGui import QIcon
 from PySide6.QtWidgets import QApplication
 from src.ui import BrowserWindow
+from src.windows_integration import launch_target
 
 def icon_path() -> Path:
     bundle = Path(getattr(sys, '_MEIPASS', Path(__file__).resolve().parent))
@@ -26,6 +27,10 @@ def main():
     window.setWindowIcon(app.windowIcon())
     app.windows.append(window)
     window.show()
+    requested = launch_target(sys.argv[1:])
+    if requested:
+        # Windows invokes the registered browser with a URL as argument.
+        window.new_tab(requested)
     sys.exit(app.exec())
 
 if __name__ == '__main__':
