@@ -36,6 +36,8 @@ DEFAULT_SETTINGS = {
     'clean_tracking_links': True,
     'block_exceptions': [],
     'performance_mode': 'balanced',
+    'default_zoom': 100,
+    'zoom_text_only': False,
     'pause_background_media': False,
     'cache_limit_mb': 128,
     'homepage': '',
@@ -163,6 +165,10 @@ class Store:
         self.settings['save_history'] = self.settings.get('save_history', True) is True
         for key in ('tracker_blocking', 'ad_blocking', 'block_popups', 'autoplay_guard', 'clean_tracking_links'):
             self.settings[key] = self.settings.get(key, DEFAULT_SETTINGS[key]) is True
+        # Firefox-style global website zoom. Ignore corrupt/old saved values.
+        from .zoom_settings import zoom_percent
+        self.settings['default_zoom'] = zoom_percent(self.settings)
+        self.settings['zoom_text_only'] = self.settings.get('zoom_text_only') is True
         if self.settings.get('performance_mode') not in ('off', 'balanced', 'gaming', 'ultra'):
             self.settings['performance_mode'] = 'balanced'
         exceptions = self.settings.get('block_exceptions', [])
