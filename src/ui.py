@@ -95,25 +95,22 @@ class IconButton(QToolButton):
         x, y = self.width() / 2, self.height() / 2
         g = self.glyph
         if g in ('back', 'forward'):
-            y -= 3
             sign = -1 if g == 'back' else 1
-            tip = x + 9 * sign
-            tail = x - 8 * sign
+            tip = x + 7 * sign
+            tail = x - 6 * sign
             painter.drawLine(QPointF(tip, y), QPointF(tail, y))
-            painter.drawLine(QPointF(tip, y), QPointF(tip - 7 * sign, y - 7))
-            painter.drawLine(QPointF(tip, y), QPointF(tip - 7 * sign, y + 7))
+            painter.drawLine(QPointF(tip, y), QPointF(tip - 5 * sign, y - 5))
+            painter.drawLine(QPointF(tip, y), QPointF(tip - 5 * sign, y + 5))
         elif g == 'reload':
-            y -= 1
-            painter.drawArc(int(x-8), int(y-8), 16, 16, 35*16, 290*16)
-            painter.drawLine(QPointF(x + 7, y - 2), QPointF(x + 8, y - 8))
-            painter.drawLine(QPointF(x + 8, y - 8), QPointF(x + 2, y - 7))
+            painter.drawArc(int(x-7), int(y-7), 14, 14, 35*16, 290*16)
+            painter.drawLine(QPointF(x + 6, y - 1), QPointF(x + 7, y - 7))
+            painter.drawLine(QPointF(x + 7, y - 7), QPointF(x + 1, y - 6))
         elif g == 'home':
-            y -= 3
-            painter.drawLine(QPointF(x-9, y), QPointF(x, y-8))
-            painter.drawLine(QPointF(x, y-8), QPointF(x+9, y))
-            painter.drawLine(QPointF(x-6, y-2), QPointF(x-6, y+8))
-            painter.drawLine(QPointF(x+6, y-2), QPointF(x+6, y+8))
-            painter.drawLine(QPointF(x-6, y+8), QPointF(x+6, y+8))
+            painter.drawLine(QPointF(x-7, y), QPointF(x, y-7))
+            painter.drawLine(QPointF(x, y-7), QPointF(x+7, y))
+            painter.drawLine(QPointF(x-5, y-1), QPointF(x-5, y+6))
+            painter.drawLine(QPointF(x+5, y-1), QPointF(x+5, y+6))
+            painter.drawLine(QPointF(x-5, y+6), QPointF(x+5, y+6))
         elif g in ('star', 'star-filled'):
             # Slightly smaller than navigation buttons.
             pts = []
@@ -164,10 +161,9 @@ class IconButton(QToolButton):
             painter.drawLine(QPointF(x-r, y-r), QPointF(x+r, y+r))
             painter.drawLine(QPointF(x+r, y-r), QPointF(x-r, y+r))
         elif g == 'brand':
-            painter.translate(0, -2)
             painter.setPen(QPen(color))
             font = self.font()
-            font.setPointSize(19)
+            font.setPointSize(16)
             font.setBold(True)
             painter.setFont(font)
             painter.drawText(self.rect(), Qt.AlignmentFlag.AlignCenter, 'N')
@@ -969,16 +965,18 @@ class BrowserWindow(QMainWindow):
         bar.setSpacing(0)
         self._toolbar_layout = bar
 
-        self.brand_btn = self._btn('brand', 'NOMIKO — New Tab', lambda: self.new_tab(), size=(36, 36))
+        self.brand_btn = self._btn('brand', 'NOMIKO — New Tab', lambda: self.new_tab(), size=(28, 28))
         self.brand_btn.setObjectName('brand')
-        self.back_btn = self._btn('back', 'Back (Alt+Left)', self.go_back, size=(31, 31))
-        self.next_btn = self._btn('forward', 'Forward (Alt+Right)', self.go_forward, size=(38, 36))
-        self.reload_btn = self._btn('reload', 'Reload (Ctrl+R)', self.reload_page, size=(38, 36))
-        self.home_btn = self._btn('home', 'Home', self.go_home, size=(31, 31))
+        self.back_btn = self._btn('back', 'Back (Alt+Left)', self.go_back, size=(28, 28))
+        self.next_btn = self._btn('forward', 'Forward (Alt+Right)', self.go_forward, size=(28, 28))
+        self.reload_btn = self._btn('reload', 'Reload (Ctrl+R)', self.reload_page, size=(28, 28))
+        self.home_btn = self._btn('home', 'Home', self.go_home, size=(28, 28))
         for button in (self.brand_btn, self.back_btn, self.next_btn, self.reload_btn, self.home_btn):
             bar.addWidget(button)
 
-        self.address = QLineEdit()
+        # Position independently of the navigation layout, so its midpoint
+        # is the true window center rather than the leftover space midpoint.
+        self.address = QLineEdit(toolbar)
         self.address.setObjectName('address')
         self.address.setPlaceholderText('Search or enter a website...')
         self.address.setFixedHeight(29)
@@ -986,7 +984,6 @@ class BrowserWindow(QMainWindow):
         self.address.setMaximumWidth({'compact': 420, 'balanced': 610, 'wide': 820}.get(
             self.store.settings.get('address_width', 'balanced'), 610))
         self.address.returnPressed.connect(self.navigate)
-        bar.addWidget(self.address)
 
         # The former stray ◈ security label after the address field is gone.
         self.bookmark_btn = self._btn('star', 'Save / remove bookmark (Ctrl+D)', self.toggle_bookmark, size=(31, 31))
@@ -1037,13 +1034,15 @@ class BrowserWindow(QMainWindow):
         bar.addWidget(self.window_controls)
         layout.addWidget(toolbar)
 
-        self.download_btn = self._btn('download', 'Show downloads (Ctrl+J)', self.show_downloads_menu, size=(31, 31))
+        self.download_btn = self._btn('download', 'Show downloads (Ctrl+J)', self.show_downloads_menu, size=(28, 28))
         self.download_btn.setObjectName('downloadMenu')
         # Session-only downloads icon; persistent download history lives in Settings.
         bar.addWidget(self.download_btn)  # _apply_toolbar places it per user order
         self._toolbar_widgets = dict(zip(TOOLBAR_ITEMS,
             [self.brand_btn, self.back_btn, self.next_btn, self.reload_btn, self.home_btn,
              self.address, self.download_btn, self.bookmark_btn, self.menu_btn]))
+        self._toolbar_widget = toolbar
+        toolbar.installEventFilter(self)
 
         self.tabs = BrowserTabs(lambda: self.new_tab())
         self.tabs.setObjectName('tabs')
@@ -1088,6 +1087,7 @@ class BrowserWindow(QMainWindow):
         footer_layout.addWidget(self.mode_label)
         layout.addWidget(footer)
         self.setCentralWidget(container)
+        QTimer.singleShot(0, self._center_address_bar)
 
     def _btn(self, label, tooltip, callback, size=(35, 35)):
         return IconButton(label, tooltip, callback, size, self)
@@ -2118,6 +2118,7 @@ class BrowserWindow(QMainWindow):
             if 'address_width' in changed:
                 win.address.setMaximumWidth({'compact':420, 'balanced':610, 'wide':820}.get(
                     win.store.settings.get('address_width'), 610))
+                QTimer.singleShot(0, win._center_address_bar)
             if 'show_footer' in changed:
                 win.footer.setVisible(bool(win.store.settings.get('show_footer', True)))
             if changed & {'toolbar_order', 'toolbar_hidden'}:
@@ -2155,6 +2156,40 @@ class BrowserWindow(QMainWindow):
         self.store.settings['sidebar_width'] = self.tabs.sidebar_width
         self.store.save_settings()
 
+    def _center_address_bar(self):
+        """Center the address field against the WINDOW, not the free layout gap.
+
+        The right-side controls and their geometry are left untouched. Shrink
+        the address field only when necessary to avoid the navigation controls.
+        """
+        if not hasattr(self, '_toolbar_widget'):
+            return
+        toolbar = self._toolbar_widget
+        if toolbar.width() <= 0 or not hasattr(self, 'quick_controls'):
+            return
+        left_end = max((
+            w.geometry().right() + 1
+            for key, w in self._toolbar_widgets.items()
+            if key not in ('address', 'bookmark', 'menu')
+            and w.isVisibleTo(toolbar)
+        ), default=0)
+        right_start = self.quick_controls.geometry().left()
+        if right_start <= left_end:
+            return
+        padding = 8
+        max_width = self.address.maximumWidth()
+        width = min(max_width, right_start - left_end - padding * 2)
+        if width < self.address.minimumWidth():
+            # No valid centered position; do not place the field over a button.
+            self.address.setVisible(False)
+            return
+        center_x = (toolbar.width() - width) // 2
+        x = max(left_end + padding, min(center_x, right_start - padding - width))
+        y = max(0, (toolbar.height() - self.address.height()) // 2)
+        self.address.setGeometry(x, y, width, self.address.height())
+        self.address.setVisible('address' not in self.store.settings.get('toolbar_hidden', []))
+        self.address.raise_()
+
     def _apply_toolbar(self):
         if not hasattr(self, '_toolbar_widgets'): return
         layout = self._toolbar_layout
@@ -2164,11 +2199,11 @@ class BrowserWindow(QMainWindow):
         # controls, no matter how the user customizes the navigation buttons.
         anchored = ('bookmark', 'menu')
         for key in TOOLBAR_ITEMS:
-            if key not in anchored:
+            if key not in anchored and key != 'address':
                 layout.removeWidget(self._toolbar_widgets[key])
         position = 0
         for key in order:
-            if key in anchored or key not in self._toolbar_widgets:
+            if key in anchored or key == 'address' or key not in self._toolbar_widgets:
                 continue
             widget = self._toolbar_widgets[key]
             layout.insertWidget(position, widget)
@@ -2176,6 +2211,7 @@ class BrowserWindow(QMainWindow):
             widget.setVisible(key not in hidden and (key != 'download' or bool(self.downloads)))
         for key in anchored:
             self._toolbar_widgets[key].setVisible(key not in hidden)
+        QTimer.singleShot(0, self._center_address_bar)
 
     def _apply_bookmark_position(self):
         if not hasattr(self, 'bookmarks_rail'): return
@@ -2373,6 +2409,9 @@ class BrowserWindow(QMainWindow):
         super().changeEvent(event)
 
     def eventFilter(self, obj, event):  # noqa: N802
+        if (obj is getattr(self, '_toolbar_widget', None) and
+                event.type() in (QEvent.Type.Resize, QEvent.Type.LayoutRequest, QEvent.Type.Show)):
+            QTimer.singleShot(0, self._center_address_bar)
         # A 6px resize border replaces the native border lost to FramelessWindowHint.
         if (event.type() in (QEvent.Type.MouseButtonPress, QEvent.Type.MouseMove)
                 and isinstance(obj, QWidget) and obj.window() is self and not self.isMaximized()):
