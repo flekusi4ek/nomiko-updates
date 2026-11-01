@@ -1,5 +1,14 @@
 # NOMIKO changelog
 
+## v0.9.7 Alpha
+- Fixed Windows controls accidentally placed on the left in v0.9.6.
+- Standard far-right order: Minimize / Maximize / Close.
+- All three buttons have equal 36×32 px hit targets; icons are truly centered vertically and horizontally.
+- Bookmark and three-line menu remain immediately to the left of the window buttons, with no large gap.
+- A flexible draggable area occupies remaining toolbar space without pushing window buttons away.
+- Preserves theme-colored startup canvas, settings, tabs and signed in-app updates.
+
+
 ## v0.9.6 Alpha
 - Far-left window controls: Close 32px, Maximize 26px, Minimize 23px.
 - Bookmark and Menu buttons grouped directly next to Minimize.
