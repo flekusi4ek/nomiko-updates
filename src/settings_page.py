@@ -14,6 +14,7 @@ from PySide6.QtWidgets import (
 from .i18n import LANGUAGES
 from .storage import APP_DIR, HOME_ITEMS, TOOLBAR_ITEMS, MENU_ITEMS
 from .widgets import WIDGETS
+from .zoom_settings import ZOOM_LEVELS
 
 
 class SettingsPane(QWidget):
@@ -179,6 +180,15 @@ class SettingsPane(QWidget):
             self.rebuild()
         lang.currentIndexChanged.connect(change_lang)
         self.note(box, 'Translations are incomplete. Untranslated phrases appear in English.')
+        zoom = self.combo([(n, f'{n}%') for n in ZOOM_LEVELS], s.get('default_zoom', 100))
+        zoom.currentIndexChanged.connect(
+            lambda _: self.set_preference(default_zoom=zoom.currentData()))
+        self.row(box, 'Default zoom', zoom)
+        zoom_text = QCheckBox(self.t('Zoom text only'))
+        zoom_text.setChecked(s.get('zoom_text_only', False))
+        zoom_text.toggled.connect(lambda checked: self.set_preference(zoom_text_only=checked))
+        box.addWidget(zoom_text)
+        self.note(box, 'Applies to all websites, including open tabs and split view, without reloading. Text-only mode scales readable text rather than the whole page; some custom web layouts may limit its effect.')
 
         # UPDATES — locally stored preferences, verified GitHub releases.
         box = self.section('Updates')
@@ -406,19 +416,19 @@ class SettingsPane(QWidget):
 
         # RESOURCE SAVER
         box = self.section('Performance')
-        perf = self.combo([('off', 'Off · never suspend tabs'),
-                           ('balanced', 'Balanced · protect background tabs'),
-                           ('gaming', 'Gaming · more aggressive saving'),
-                           ('ultra', 'Ultra · strongest background saving')],
+        perf = self.combo([('off', 'Off · keep tabs active'),
+                           ('balanced', 'Balanced · keep tabs active'),
+                           ('gaming', 'Gaming · keep tabs active'),
+                           ('ultra', 'Ultra · keep tabs active')],
                           s.get('performance_mode', 'balanced'))
         perf.currentIndexChanged.connect(lambda _: self.set_preference(performance_mode=perf.currentData()))
         self.row(box, 'Background tab saving', perf)
-        self.note(box, 'Balanced: freeze 2 min / discard 8 min. Gaming: 25 sec / 90 sec. Ultra: 10 sec / 35 sec. Qt decides whether it is safe to suspend a tab.')
+        self.note(box, 'NOMIKO never freezes or discards background tabs automatically in any profile. Windows or a site can still reload after crashes or system memory pressure.')
         cache = self.combo([('64', '64 MB'), ('128', '128 MB'), ('256', '256 MB'), ('512', '512 MB')], str(s.get('cache_limit_mb', 128)))
         cache.currentIndexChanged.connect(lambda _: self.set_preference(cache_limit_mb=int(cache.currentData())))
         self.row(box, 'HTTP disk cache limit', cache)
         self.note(box, 'Cache limit reduces disk usage, not guaranteed RAM use. Audio/video tabs can remain active by design.')
-        self.note(box, 'Discarded tabs reload when opened. Resource use never reaches zero, and no setting can guarantee Fortnite FPS.')
+        self.note(box, 'Keeping tabs active uses more RAM. NOMIKO no longer forces background reloads to save resources.')
 
         # LOCAL HOME WIDGETS
         box = self.section('Widgets')
