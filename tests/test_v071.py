@@ -45,7 +45,7 @@ class V071Tests(TestCase):
     def test_sidebar_is_compact_right_and_searchable(self):
         settings = (Path(__file__).resolve().parents[1] / 'src' / 'settings_page.py').read_text('utf-8')
         self.assertIn('self.root.addWidget(self.rail, 0)', settings)
-        self.assertIn('self.rail.setFixedWidth(168)', settings)
+        self.assertIn('self.rail.setFixedWidth(186)', settings)
         self.assertIn('QSize(135, 27)', settings)
         self.assertIn('self.category_filter.textChanged.connect(self.filter_categories)', settings)
         self.assertIn('def hide_all_widgets(self)', settings)
