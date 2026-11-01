@@ -1,5 +1,16 @@
 # NOMIKO changelog
 
+## v0.9.5 Alpha
+- Registered NOMIKO in Windows 11 Default Apps for HTTP, HTTPS, HTML and HTM.
+- Compact minimalist top navigation, shorter adjustable address bar and thinner horizontal tabs.
+- Simplified three-line main menu with useful secondary tools in a submenu.
+- Per-session download icon: hidden until first download; persistent download history remains in Settings.
+- Redesigned settings with left navigation and cross-section search.
+- More working controls: local profile folder, downloads folder/history actions and default browser selection.
+- Core settings labels translated into Ukrainian, Russian, Polish and German.
+- Preserves user profile, bookmarks, history and existing in-app signed update pipeline.
+
+
 ## v0.9.4 Alpha
 - Firefox-style Default zoom with website-wide preset levels from 50% to 300%.
 - Zoom text only, applying readable text font scaling rather than whole-page zoom.
