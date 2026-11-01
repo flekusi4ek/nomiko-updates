@@ -82,7 +82,9 @@ class V07Tests(unittest.TestCase):
         root = Path(__file__).resolve().parents[1]/'src'
         ui = (root/'ui.py').read_text('utf-8')
         self.assertIn("('Reopen closed tab', 'Ctrl+Shift+T'", ui)
-        self.assertIn("'ultra': (10, 35)", ui)
+        # In v0.9.3 old Ultra mode must no longer discard hidden tabs.
+        maintainer = ui.split('    def _maintain_background_tabs(self):', 1)[1].split('    def on_widget_action(', 1)[0]
+        self.assertNotIn('setLifecycleState(', maintainer)
         self.assertIn('def _request_weather', ui)
         self.assertIn("'widget_enabled'", ui)
         self.assertIn('setHttpCacheMaximumSize', ui)
