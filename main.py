@@ -4,7 +4,6 @@ import os
 import sys
 from PySide6.QtGui import QIcon, QColor, QPalette
 from PySide6.QtWidgets import QApplication
-from src.ui import BrowserWindow
 from src.windows_integration import launch_target
 from src.storage import Store
 from src.theme_background import page_background
@@ -17,10 +16,24 @@ def main():
     # Windows CI and troubleshooting: imports the native Qt WebEngine modules
     # without opening a full browser window or contacting any website.
     if '--self-check' in sys.argv:
-        from PySide6.QtWebEngineCore import QWebEngineProfile
-        from PySide6.QtWebEngineWidgets import QWebEngineView
-        assert QWebEngineProfile and QWebEngineView
-        return
+        # The packaged windowed exe has no visible stderr. Persist the *actual*
+        # traceback so CI can diagnose DLL/linker errors instead of guessing.
+        try:
+            from PySide6.QtWebEngineCore import QWebEngineProfile
+            from PySide6.QtWebEngineWidgets import QWebEngineView
+            from src.ui import BrowserWindow
+            assert QWebEngineProfile and QWebEngineView and BrowserWindow
+        except BaseException:
+            import tempfile
+            import traceback
+            try:
+                (Path(tempfile.gettempdir()) / 'NOMIKO-startup-diagnostic.txt').write_text(
+                    traceback.format_exc(), encoding='utf-8')
+            except OSError:
+                pass
+            return 23
+        return 0
+    from src.ui import BrowserWindow
     if os.name == 'nt':
         try:
             import ctypes
@@ -50,4 +63,4 @@ def main():
     sys.exit(app.exec())
 
 if __name__ == '__main__':
-    main()
+    sys.exit(main())
