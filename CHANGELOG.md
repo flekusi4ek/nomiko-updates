@@ -1,5 +1,14 @@
 # NOMIKO changelog
 
+## v0.9.10 Alpha
+- Prevent DLL sharing violations during upgrades by staging a complete app copy and replacing the install directory only after extraction completes.
+- If replacing the application directory fails (files still in use), abort safely without overwriting individual Qt binaries; restore the old directory if a final swap fails.
+- Keep the prior installed version in an adjacent rollback folder until the next successful installer run; user profile data stays at %APPDATA%\\NOMIKO.
+- The update helper now waits for both NOMIKO.exe and QtWebEngineProcess.exe from the installed folder to exit before installing; writes a short local status message if an update is postponed.
+- Test Qt WebEngine native DLL imports in both packaged and NSIS-installed Windows builds before publishing a release.
+- Preserve existing SoundCloud and adaptive-tab changes.
+
+
 ## v0.9.9 Alpha
 - Horizontally arranged tabs now shrink evenly as more tabs open; the New Tab button remains accessible, with scroll as a fallback at the minimum width.
 - SoundCloud pages (including embedded players) receive a narrowly scoped autoplay compatibility exception; other websites keep their normal user-gesture setting.

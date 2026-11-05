@@ -2656,7 +2656,8 @@ class BrowserWindow(QMainWindow):
                     temp_helper.parent.mkdir(parents=True, exist_ok=True)
                     shutil.copy2(helper, temp_helper)
                     subprocess.Popen([str(temp_helper), '--pid', str(os.getpid()),
-                        '--installer', str(installer), '--sha256', expected_sha],
+                        '--installer', str(installer), '--sha256', expected_sha,
+                        '--app-dir', str(Path(sys.executable).resolve().parent)],
                         close_fds=True, creationflags=flags)
                 except OSError as exc:
                     QMessageBox.warning(self, 'NOMIKO update',

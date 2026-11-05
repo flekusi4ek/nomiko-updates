@@ -1,11 +1,11 @@
 Unicode True
 !include "MUI2.nsh"
 !define APPNAME "NOMIKO"
-!define VERSION "0.9.9"
+!define VERSION "0.9.10"
 !define MUI_ICON "..\assets\NOMIKO.ico"
 !define MUI_UNICON "..\assets\NOMIKO.ico"
 Name "${APPNAME} ${VERSION} Alpha"
-OutFile "NOMIKO-Setup-0.9.9-alpha.exe"
+OutFile "NOMIKO-Setup-0.9.10-alpha.exe"
 InstallDir "$LOCALAPPDATA\Programs\NOMIKO"
 RequestExecutionLevel user
 SetCompressor /SOLID lzma
@@ -18,10 +18,76 @@ SetCompressor /SOLID lzma
 !insertmacro MUI_LANGUAGE "English"
 Section "NOMIKO browser" SEC_MAIN
  SetShellVarContext current
- SetOutPath "$INSTDIR"
+ ; Assemble the complete app next to the destination BEFORE touching the
+ ; installed Qt files. A locked previous DLL must never produce a mixed build.
+ StrCpy $R8 "$INSTDIR.__incoming"
+ StrCpy $R9 "$INSTDIR.__rollback"
+ ClearErrors
+ RMDir /r "$R8"
+ IfFileExists "$R8\*.*" incoming_locked 0
+ ClearErrors
+ RMDir /r "$R9"
+ IfFileExists "$R9\*.*" rollback_locked 0
+ ClearErrors
+ CreateDirectory "$R8"
+ IfErrors staging_failed
+ SetOutPath "$R8"
+ ClearErrors
  File /r "..\dist\NOMIKO\*"
  File /oname=NOMIKO.ico "..\assets\NOMIKO.ico"
+ IfErrors staging_failed
+ IfFileExists "$R8\NOMIKO.exe" stage_ready staging_failed
+ stage_ready:
+ ; Never change the running install in place. Renaming an in-use directory
+ ; can fail safely; in that case abort without modifying the old installation.
+ StrCpy $R7 0
+ IfFileExists "$INSTDIR\*.*" backup_existing begin_commit
+ backup_existing:
+ ClearErrors
+ Rename "$INSTDIR" "$R9"
+ IfErrors install_locked
+ StrCpy $R7 1
+ begin_commit:
+ ClearErrors
+ Rename "$R8" "$INSTDIR"
+ IfErrors commit_failed
+ Goto install_complete
+ commit_failed:
+ ; Restore the old install if the final rename was blocked.
+ StrCmp $R7 1 0 commit_error
+ ClearErrors
+ Rename "$R9" "$INSTDIR"
+ IfErrors restore_failed
+ commit_error:
+ MessageBox MB_OK|MB_ICONSTOP "NOMIKO could not finish replacing the application folder. Your previous version was restored. Close NOMIKO and QtWebEngineProcess or restart Windows, then retry." /SD IDOK
+ SetErrorLevel 2
+ Abort
+ restore_failed:
+ MessageBox MB_OK|MB_ICONSTOP "NOMIKO installation stopped. Your prior files are retained at $R9. Restart Windows and restore this folder before trying again." /SD IDOK
+ SetErrorLevel 2
+ Abort
+ install_locked:
+ MessageBox MB_OK|MB_ICONSTOP "NOMIKO is still running or its Qt files are locked. The old installation was not changed. Close NOMIKO and QtWebEngineProcess, or restart Windows, then retry." /SD IDOK
+ SetErrorLevel 2
+ Abort
+ incoming_locked:
+ MessageBox MB_OK|MB_ICONSTOP "NOMIKO could not remove an earlier staging folder: $R8. Restart Windows and try again." /SD IDOK
+ SetErrorLevel 2
+ Abort
+ rollback_locked:
+ MessageBox MB_OK|MB_ICONSTOP "NOMIKO's rollback folder is locked: $R9. Restart Windows and try again." /SD IDOK
+ SetErrorLevel 2
+ Abort
+ staging_failed:
+ MessageBox MB_OK|MB_ICONSTOP "NOMIKO could not extract the new browser files. Your existing installation has not been changed." /SD IDOK
+ SetErrorLevel 2
+ Abort
+ install_complete:
+ ; A rollback copy is retained until the next upgrade; user profile data
+ ; is NEVER inside this folder (%APPDATA%\NOMIKO is separate).
+ SetOutPath "$INSTDIR"
  WriteUninstaller "$INSTDIR\Uninstall.exe"
+ IfErrors commit_error
 
  ; Per-user Windows 11 Default Apps registration (does NOT seize defaults).
  WriteRegStr HKCU "Software\Classes\NOMIKO.HTTP" "" "NOMIKO HTTP link"

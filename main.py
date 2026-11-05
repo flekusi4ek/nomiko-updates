@@ -14,6 +14,13 @@ def icon_path() -> Path:
     return bundle / 'assets' / 'NOMIKO.ico'
 
 def main():
+    # Windows CI and troubleshooting: imports the native Qt WebEngine modules
+    # without opening a full browser window or contacting any website.
+    if '--self-check' in sys.argv:
+        from PySide6.QtWebEngineCore import QWebEngineProfile
+        from PySide6.QtWebEngineWidgets import QWebEngineView
+        assert QWebEngineProfile and QWebEngineView
+        return
     if os.name == 'nt':
         try:
             import ctypes

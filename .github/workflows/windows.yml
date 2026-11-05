@@ -60,6 +60,12 @@ jobs:
         run: |
           python -m PyInstaller --noconfirm --clean --windowed --onedir --name NOMIKO --icon assets/NOMIKO.ico --add-data 'assets/NOMIKO.ico;assets' --collect-all PySide6.QtWebEngineCore --collect-all PySide6.QtWebEngineWidgets --collect-all cryptography main.py
 
+      - name: Smoke-test packaged Qt WebEngine imports
+        shell: pwsh
+        run: |
+          & .\\dist\\NOMIKO\\NOMIKO.exe --self-check
+          if ($LASTEXITCODE -ne 0) { throw 'Packaged NOMIKO QtWebEngineCore DLL import failed.' }
+
       - name: Build independent update helper
         shell: pwsh
         run: |
@@ -75,10 +81,21 @@ jobs:
         run: |
           & 'C:\Program Files (x86)\NSIS\makensis.exe' installer\NOMIKO.nsi
           if ($LASTEXITCODE -ne 0) { throw "NSIS installer failed." }
-          $found = Get-ChildItem -Path . -Recurse -File -Filter 'NOMIKO-Setup-0.9.9-alpha.exe' | Select-Object -First 1
+          $found = Get-ChildItem -Path . -Recurse -File -Filter 'NOMIKO-Setup-0.9.10-alpha.exe' | Select-Object -First 1
           if (-not $found) { throw "Installer was not generated." }
-          $target = Join-Path (Get-Location).Path 'NOMIKO-Setup-0.9.9-alpha.exe'
+          $target = Join-Path (Get-Location).Path 'NOMIKO-Setup-0.9.10-alpha.exe'
           if ($found.FullName -ne $target) { Copy-Item -LiteralPath $found.FullName -Destination $target -Force }
+
+      - name: Smoke-test installed NOMIKO
+        shell: pwsh
+        run: |
+          $installer = Join-Path (Get-Location).Path 'NOMIKO-Setup-0.9.10-alpha.exe'
+          $proc = Start-Process -FilePath $installer -ArgumentList '/S' -Wait -PassThru
+          if ($proc.ExitCode -ne 0) { throw "Silent installer failed with code $($proc.ExitCode)" }
+          $exe = Join-Path $env:LOCALAPPDATA 'Programs\\NOMIKO\\NOMIKO.exe'
+          if (-not (Test-Path $exe)) { throw 'NOMIKO.exe missing from installed folder.' }
+          & $exe --self-check
+          if ($LASTEXITCODE -ne 0) { throw 'Installed NOMIKO cannot import QtWebEngineCore.' }
 
       - name: Build portable ZIP
         shell: pwsh
@@ -128,7 +145,7 @@ jobs:
         run: |
           if (-not $env:NOMIKO_SIGNING_KEY_B64) { throw 'NOMIKO_SIGNING_KEY_B64 is missing' }
           $version = '${{ steps.gate.outputs.version }}'
-          python tools/sign_release.py --version $version --channel alpha --installer "NOMIKO-Setup-$version-alpha.exe" --out release --notes 'Adaptive tabs and SoundCloud media compatibility checks; signed automatic updates.'
+          python tools/sign_release.py --version $version --channel alpha --installer "NOMIKO-Setup-$version-alpha.exe" --out release --notes 'Safer staged installation, rollback, and Qt WebEngine startup checks.'
           if ($LASTEXITCODE -ne 0) { throw 'Signing failed' }
 
       - name: Publish signed GitHub Release
@@ -139,5 +156,5 @@ jobs:
         run: |
           $tag = '${{ steps.gate.outputs.tag }}'
           $version = '${{ steps.gate.outputs.version }}'
-          gh release create $tag "NOMIKO-Setup-$version-alpha.exe" NOMIKO-Windows-portable.zip release/update.json release/update.sig --repo '${{ github.repository }}' --target '${{ github.sha }}' --title "NOMIKO $version Alpha" --notes 'Adaptive tab widths and SoundCloud media policy. Experimental alpha; no Authenticode code signature.' --prerelease
+          gh release create $tag "NOMIKO-Setup-$version-alpha.exe" NOMIKO-Windows-portable.zip release/update.json release/update.sig --repo '${{ github.repository }}' --target '${{ github.sha }}' --title "NOMIKO $version Alpha" --notes 'Staged installer, Qt WebEngine startup smoke tests, and safer updates. Experimental alpha; no Authenticode code signature.' --prerelease
           if ($LASTEXITCODE -ne 0) { throw 'Publishing release failed' }

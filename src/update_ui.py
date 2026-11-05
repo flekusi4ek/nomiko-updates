@@ -52,7 +52,7 @@ class UpdateCenter(QDialog):
         root = QVBoxLayout(self)
         root.setSpacing(10)
         root.addWidget(QLabel(f'NOMIKO {CURRENT_VERSION} Alpha'))
-        description = QLabel('Official releases: flekideveloper/nomiko-updates.\nEvery update must pass Ed25519 signature and SHA-256 checks. Your browsing data stays local.')
+        description = QLabel('Official releases: flekusi4ek/nomiko-updates.\nEvery update must pass Ed25519 signature and SHA-256 checks. Your browsing data stays local.')
         description.setWordWrap(True)
         root.addWidget(description)
         row = QHBoxLayout()
