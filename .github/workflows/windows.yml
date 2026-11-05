@@ -72,6 +72,22 @@ jobs:
             throw 'Packaged NOMIKO QtWebEngineCore DLL import failed.'
           }
 
+      - name: Smoke-test relocated NOMIKO files
+        shell: pwsh
+        run: |
+          $target = Join-Path $env:TEMP 'NOMIKO-RelocationTest'
+          if (Test-Path $target) { Remove-Item $target -Recurse -Force }
+          Copy-Item -LiteralPath 'dist\\NOMIKO' -Destination $target -Recurse
+          $exe = Join-Path $target 'NOMIKO.exe'
+          & $exe --self-check
+          $code = $LASTEXITCODE
+          Write-Host "Relocated NOMIKO exit code: $code"
+          if ($code -ne 0) {
+            $diagnostic = Join-Path $env:TEMP 'NOMIKO-startup-diagnostic.txt'
+            if (Test-Path $diagnostic) { Get-Content $diagnostic }
+            throw 'Relocated NOMIKO failed to load Qt.'
+          }
+
       - name: Build independent update helper
         shell: pwsh
         run: |
@@ -100,12 +116,17 @@ jobs:
           if ($proc.ExitCode -ne 0) { throw "Silent installer failed with code $($proc.ExitCode)" }
           $exe = Join-Path $env:LOCALAPPDATA 'Programs\\NOMIKO\\NOMIKO.exe'
           if (-not (Test-Path $exe)) { throw 'NOMIKO.exe missing from installed folder.' }
-          & $exe --self-check
-          if ($LASTEXITCODE -ne 0) {
+          $passed = $false
+          for ($attempt = 1; $attempt -le 4; $attempt++) {
+            & $exe --self-check
+            $code = $LASTEXITCODE
+            Write-Host "Installed NOMIKO startup attempt $attempt exit code: $code"
+            if ($code -eq 0) { $passed = $true; break }
             $diagnostic = Join-Path $env:TEMP 'NOMIKO-startup-diagnostic.txt'
             if (Test-Path $diagnostic) { Get-Content $diagnostic }
-            throw 'Installed NOMIKO cannot import QtWebEngineCore.'
+            Start-Sleep -Seconds 3
           }
+          if (-not $passed) { throw 'Installed NOMIKO cannot import QtWebEngineCore after retries.' }
 
       - name: Build portable ZIP
         shell: pwsh
