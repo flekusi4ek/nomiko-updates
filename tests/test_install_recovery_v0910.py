@@ -34,7 +34,7 @@ class InstallerRecoveryTests(TestCase):
 
     def test_shutdown_wait_is_bounded_and_checks_again(self):
         with mock.patch.object(update_helper, 'running_browser_processes',
-                               side_effect=[[123], [], []]) as running, \\
+                               side_effect=[[123], [], []]) as running, \
              mock.patch.object(update_helper.time, 'sleep'):
             self.assertTrue(update_helper.wait_for_browser_shutdown(Path('C:/NOMIKO'), 2))
             self.assertEqual(running.call_count, 2)
