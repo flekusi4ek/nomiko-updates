@@ -1,11 +1,11 @@
 Unicode True
 !include "MUI2.nsh"
 !define APPNAME "NOMIKO"
-!define VERSION "0.9.8"
+!define VERSION "0.9.9"
 !define MUI_ICON "..\assets\NOMIKO.ico"
 !define MUI_UNICON "..\assets\NOMIKO.ico"
 Name "${APPNAME} ${VERSION} Alpha"
-OutFile "NOMIKO-Setup-0.9.8-alpha.exe"
+OutFile "NOMIKO-Setup-0.9.9-alpha.exe"
 InstallDir "$LOCALAPPDATA\Programs\NOMIKO"
 RequestExecutionLevel user
 SetCompressor /SOLID lzma

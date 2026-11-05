@@ -33,6 +33,8 @@ from .bookmark_visibility import has_bookmark_toolbar_content
 from .theme_background import page_background, apply_page_background
 from .windows_integration import open_windows_default_apps
 from .tab_drag import drop_index, neighbor_shift
+from .tab_layout import fitted_tab_width
+from .media_compat import is_soundcloud_host, playback_requires_gesture, missing_soundcloud_codecs
 from .update_trust import CURRENT_VERSION
 from .update_ui import UpdateCenter, UpdateWorker
 from .productivity import safe_web_url, render_reader
@@ -179,6 +181,7 @@ class NomikoTabBar(QTabBar):
         super().__init__(parent)
         self.side = False
         self.side_compact = False
+        self.compact_tab_width = 190
         self.accent = '#9A82FF'
         self.ink = '#EDEBF9'
         self.surface = '#151721'
@@ -269,7 +272,9 @@ class NomikoTabBar(QTabBar):
             # RoundedWest/East rotate Qt's logical tab size: return the
             # *unrotated* 41px height first, then the intended sidebar width.
             return QSize(41, max(40, self.width()-10))
-        return super().tabSizeHint(index)
+        hint = super().tabSizeHint(index)
+        # QSS adds tab padding/margins (approximately 18px).
+        return QSize(max(56, self.compact_tab_width - 18), hint.height())
 
     def mouseMoveEvent(self, event):  # noqa: N802
         point = event.position().toPoint()
@@ -464,6 +469,7 @@ class BrowserTabs(QWidget):
         self.bar.setExpanding(False)
         self.bar.setMovable(True)
         self.bar.setUsesScrollButtons(True)
+        self.bar.setElideMode(Qt.TextElideMode.ElideRight)
         self.bar.setTabsClosable(True)  # Native Qt closes, not tiny manual overlays.
         self.bar.tabCloseRequested.connect(self.tabCloseRequested.emit)
         self.bar.tabMoved.connect(self._tab_moved)
@@ -506,10 +512,20 @@ class BrowserTabs(QWidget):
                 self.bar.setFixedHeight(wanted)
             return
         self.bar.setMinimumHeight(0)
-        widths = sum(max(54, self.bar.tabRect(i).width()) for i in range(self.bar.count()))
-        target = max(1, min(widths + 8, max(1, self.width()-61)))
+        # Reserve room for New Tab, then shrink every horizontal tab evenly.
+        # When the readable 76px minimum is reached, Qt scroll buttons return.
+        margins = self.line.contentsMargins()
+        available = max(1, self.width() - margins.left() - margins.right()
+                        - self.plus.width() - 2 * self.line.spacing() - 2)
+        count = self.bar.count()
+        width = fitted_tab_width(available, count)
+        if self.bar.compact_tab_width != width:
+            self.bar.compact_tab_width = width
+            self.bar.updateGeometry()
+        target = max(1, min(available, count * width))
         if self.bar.width() != target:
             self.bar.setFixedWidth(target)
+        self.bar.setUsesScrollButtons(count * width > available)
 
     def addTab(self, widget, title):
         self.stack.addWidget(widget)
@@ -844,11 +860,20 @@ class BrowserView(QWebEngineView):
         self.settings().setAttribute(QWebEngineSettings.WebAttribute.JavascriptCanOpenWindows,
             not browser.store.settings.get('block_popups', True))
         self.settings().setAttribute(QWebEngineSettings.WebAttribute.LocalContentCanAccessRemoteUrls, False)
-        self.settings().setAttribute(QWebEngineSettings.WebAttribute.PlaybackRequiresUserGesture,
-                                     browser.store.settings.get('autoplay_guard', True))
+        # SoundCloud can play without the global autoplay policy getting relaxed.
+        self.urlChanged.connect(self.apply_media_policy)
+        self.apply_media_policy()
         apply_zoom_to_view(self, browser.store.settings)
         self.loadFinished.connect(
             lambda _ok: apply_zoom_to_view(self, browser.store.settings))
+
+    def apply_media_policy(self, url=None):
+        url = url if isinstance(url, QUrl) else self.url()
+        gesture = playback_requires_gesture(
+            self.browser.store.settings.get('autoplay_guard', True),
+            url.scheme(), url.host())
+        self.settings().setAttribute(
+            QWebEngineSettings.WebAttribute.PlaybackRequiresUserGesture, gesture)
 
     def createWindow(self, window_type):  # noqa: N802
         return self.browser.new_tab()
@@ -1274,7 +1299,28 @@ class BrowserWindow(QMainWindow):
         url = view.url().toString()
         if ok and not self.private and url.startswith(('https://', 'http://')):
             self.store.add_history(url, view.title())
+        if ok and isinstance(view, BrowserView) and is_soundcloud_host(view.url().host()):
+            # Missing bundled MP3/AAC codecs cannot be repaired by autoplay flags.
+            view.page().runJavaScript(
+                """(() => {
+                    const audio = document.createElement('audio');
+                    const aac = 'audio/mp4; codecs="mp4a.40.2"';
+                    return {
+                        mp3: Boolean(audio.canPlayType('audio/mpeg')),
+                        aac: Boolean(audio.canPlayType(aac)),
+                        mse_aac: Boolean(window.MediaSource &&
+                            window.MediaSource.isTypeSupported(aac))
+                    };
+                })()""",
+                lambda result, v=view, u=url: self._on_soundcloud_codecs(v, u, result))
         self._queue_session_save()
+
+    def _on_soundcloud_codecs(self, view, checked_url, result):
+        if (view is self.current_view() and view.url().toString() == checked_url
+                and missing_soundcloud_codecs(result)):
+            self.status.setText(
+                'SoundCloud: MP3/AAC codecs unavailable in this Qt WebEngine build; '
+                'some tracks may not play.')
 
     def update_address(self, view):
         if isinstance(view, SplitViewTab):
@@ -2100,9 +2146,11 @@ class BrowserWindow(QMainWindow):
                         view.settings().setAttribute(
                             QWebEngineSettings.WebAttribute.JavascriptCanOpenWindows,
                             not win.store.settings.get('block_popups', True))
-                        view.settings().setAttribute(
-                            QWebEngineSettings.WebAttribute.PlaybackRequiresUserGesture,
-                            win.store.settings.get('autoplay_guard', True))
+                        view.apply_media_policy()
+                    elif isinstance(view, SplitViewTab):
+                        for pane in (view.left_pane, view.right_pane):
+                            if isinstance(pane.view, BrowserView):
+                                pane.view.apply_media_policy()
             if changes.get('performance_mode') == 'off':
                 for i in range(win.tabs.count()):
                     view = win.tabs.widget(i)

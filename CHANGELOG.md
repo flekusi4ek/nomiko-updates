@@ -1,5 +1,12 @@
 # NOMIKO changelog
 
+## v0.9.9 Alpha
+- Horizontally arranged tabs now shrink evenly as more tabs open; the New Tab button remains accessible, with scroll as a fallback at the minimum width.
+- SoundCloud pages (including embedded players) receive a narrowly scoped autoplay compatibility exception; other websites keep their normal user-gesture setting.
+- Warn in the status bar if Qt WebEngine's bundled media codecs do not include MP3/AAC, which requires a codec-capable engine build to fix fully.
+- Sidebar tabs, privacy protections, themes and signed updates are unchanged.
+
+
 ## v0.9.8 Alpha
 - Reduced only the left navigation icon buttons to consistent 28×28 px hitboxes and centered their glyphs.
 - Centered the search/address field against the full browser window instead of free toolbar space, with overlap protection.

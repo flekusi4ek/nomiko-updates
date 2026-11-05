@@ -75,9 +75,9 @@ jobs:
         run: |
           & 'C:\Program Files (x86)\NSIS\makensis.exe' installer\NOMIKO.nsi
           if ($LASTEXITCODE -ne 0) { throw "NSIS installer failed." }
-          $found = Get-ChildItem -Path . -Recurse -File -Filter 'NOMIKO-Setup-0.9.8-alpha.exe' | Select-Object -First 1
+          $found = Get-ChildItem -Path . -Recurse -File -Filter 'NOMIKO-Setup-0.9.9-alpha.exe' | Select-Object -First 1
           if (-not $found) { throw "Installer was not generated." }
-          $target = Join-Path (Get-Location).Path 'NOMIKO-Setup-0.9.8-alpha.exe'
+          $target = Join-Path (Get-Location).Path 'NOMIKO-Setup-0.9.9-alpha.exe'
           if ($found.FullName -ne $target) { Copy-Item -LiteralPath $found.FullName -Destination $target -Force }
 
       - name: Build portable ZIP
@@ -128,7 +128,7 @@ jobs:
         run: |
           if (-not $env:NOMIKO_SIGNING_KEY_B64) { throw 'NOMIKO_SIGNING_KEY_B64 is missing' }
           $version = '${{ steps.gate.outputs.version }}'
-          python tools/sign_release.py --version $version --channel alpha --installer "NOMIKO-Setup-$version-alpha.exe" --out release --notes 'NOMIKO desktop and taskbar icon; Windows desktop shortcut; signed automatic updates.'
+          python tools/sign_release.py --version $version --channel alpha --installer "NOMIKO-Setup-$version-alpha.exe" --out release --notes 'Adaptive tabs and SoundCloud media compatibility checks; signed automatic updates.'
           if ($LASTEXITCODE -ne 0) { throw 'Signing failed' }
 
       - name: Publish signed GitHub Release
@@ -139,5 +139,5 @@ jobs:
         run: |
           $tag = '${{ steps.gate.outputs.tag }}'
           $version = '${{ steps.gate.outputs.version }}'
-          gh release create $tag "NOMIKO-Setup-$version-alpha.exe" NOMIKO-Windows-portable.zip release/update.json release/update.sig --repo '${{ github.repository }}' --target '${{ github.sha }}' --title "NOMIKO $version Alpha" --notes 'Desktop shortcut, Windows icons, signed GitHub update manifest. Experimental alpha; no Authenticode code signature.' --prerelease
+          gh release create $tag "NOMIKO-Setup-$version-alpha.exe" NOMIKO-Windows-portable.zip release/update.json release/update.sig --repo '${{ github.repository }}' --target '${{ github.sha }}' --title "NOMIKO $version Alpha" --notes 'Adaptive tab widths and SoundCloud media policy. Experimental alpha; no Authenticode code signature.' --prerelease
           if ($LASTEXITCODE -ne 0) { throw 'Publishing release failed' }
