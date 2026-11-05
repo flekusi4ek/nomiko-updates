@@ -12,28 +12,57 @@ def icon_path() -> Path:
     bundle = Path(getattr(sys, '_MEIPASS', Path(__file__).resolve().parent))
     return bundle / 'assets' / 'NOMIKO.ico'
 
-def main():
-    # Windows CI and troubleshooting: imports the native Qt WebEngine modules
-    # without opening a full browser window or contacting any website.
-    if '--self-check' in sys.argv:
-        # The packaged windowed exe has no visible stderr. Persist the *actual*
-        # traceback so CI can diagnose DLL/linker errors instead of guessing.
+def load_browser_window():
+    """Use exactly the same native Qt import order in diagnostics and real startup."""
+    import time
+    for attempt in range(4):
         try:
             from PySide6.QtWebEngineCore import QWebEngineProfile
             from PySide6.QtWebEngineWidgets import QWebEngineView
             from src.ui import BrowserWindow
-            assert QWebEngineProfile and QWebEngineView and BrowserWindow
+            assert QWebEngineProfile and QWebEngineView
+            return BrowserWindow
+        except ImportError as exc:
+            if attempt == 3 or 'used by another process' not in str(exc).lower():
+                raise
+            # Windows antivirus/indexing can temporarily hold a freshly
+            # installed DLL. Retry just the sharing-violation case.
+            time.sleep((0.4, 0.8, 1.6)[attempt])
+
+
+def write_startup_diagnostic():
+    import tempfile
+    import traceback
+    try:
+        (Path(tempfile.gettempdir()) / 'NOMIKO-startup-diagnostic.txt').write_text(
+            traceback.format_exc(), encoding='utf-8')
+    except OSError:
+        pass
+
+
+def main():
+    # CI and normal startup must exercise the exact same native DLL load path.
+    if '--self-check' in sys.argv:
+        try:
+            load_browser_window()
         except BaseException:
-            import tempfile
-            import traceback
-            try:
-                (Path(tempfile.gettempdir()) / 'NOMIKO-startup-diagnostic.txt').write_text(
-                    traceback.format_exc(), encoding='utf-8')
-            except OSError:
-                pass
+            write_startup_diagnostic()
             return 23
         return 0
-    from src.ui import BrowserWindow
+    try:
+        BrowserWindow = load_browser_window()
+    except ImportError:
+        write_startup_diagnostic()
+        if os.name == 'nt':
+            try:
+                import ctypes
+                ctypes.windll.user32.MessageBoxW(
+                    None,
+                    'NOMIKO could not load the Qt WebEngine libraries. Close any remaining NOMIKO processes or restart Windows, then run the latest installer. A diagnostic file was saved to the TEMP folder.',
+                    'NOMIKO startup error', 0x10)
+            except (OSError, AttributeError):
+                pass
+        return 24
     if os.name == 'nt':
         try:
             import ctypes
