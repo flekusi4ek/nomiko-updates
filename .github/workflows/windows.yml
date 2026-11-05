@@ -63,8 +63,14 @@ jobs:
       - name: Smoke-test packaged Qt WebEngine imports
         shell: pwsh
         run: |
+          python -c 'from PySide6.QtWebEngineCore import QWebEngineProfile; print("Unfrozen QtWebEngineCore import passed")'
+          if ($LASTEXITCODE -ne 0) { throw 'Python QtWebEngineCore import failed on the runner.' }
           & .\\dist\\NOMIKO\\NOMIKO.exe --self-check
-          if ($LASTEXITCODE -ne 0) { throw 'Packaged NOMIKO QtWebEngineCore DLL import failed.' }
+          if ($LASTEXITCODE -ne 0) {
+            $diagnostic = Join-Path $env:TEMP 'NOMIKO-startup-diagnostic.txt'
+            if (Test-Path $diagnostic) { Get-Content $diagnostic }
+            throw 'Packaged NOMIKO QtWebEngineCore DLL import failed.'
+          }
 
       - name: Build independent update helper
         shell: pwsh
@@ -95,7 +101,11 @@ jobs:
           $exe = Join-Path $env:LOCALAPPDATA 'Programs\\NOMIKO\\NOMIKO.exe'
           if (-not (Test-Path $exe)) { throw 'NOMIKO.exe missing from installed folder.' }
           & $exe --self-check
-          if ($LASTEXITCODE -ne 0) { throw 'Installed NOMIKO cannot import QtWebEngineCore.' }
+          if ($LASTEXITCODE -ne 0) {
+            $diagnostic = Join-Path $env:TEMP 'NOMIKO-startup-diagnostic.txt'
+            if (Test-Path $diagnostic) { Get-Content $diagnostic }
+            throw 'Installed NOMIKO cannot import QtWebEngineCore.'
+          }
 
       - name: Build portable ZIP
         shell: pwsh
