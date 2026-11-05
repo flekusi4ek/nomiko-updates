@@ -65,8 +65,10 @@ jobs:
         run: |
           python -c 'from PySide6.QtWebEngineCore import QWebEngineProfile; print("Unfrozen QtWebEngineCore import passed")'
           if ($LASTEXITCODE -ne 0) { throw 'Python QtWebEngineCore import failed on the runner.' }
-          & .\\dist\\NOMIKO\\NOMIKO.exe --self-check
-          if ($LASTEXITCODE -ne 0) {
+          $exe = Join-Path (Get-Location).Path 'dist\\NOMIKO\\NOMIKO.exe'
+          $check = Start-Process -FilePath $exe -ArgumentList '--self-check' -Wait -PassThru
+          Write-Host "Packaged NOMIKO exit code: $($check.ExitCode)"
+          if ($check.ExitCode -ne 0) {
             $diagnostic = Join-Path $env:TEMP 'NOMIKO-startup-diagnostic.txt'
             if (Test-Path $diagnostic) { Get-Content $diagnostic }
             throw 'Packaged NOMIKO QtWebEngineCore DLL import failed.'
@@ -79,8 +81,8 @@ jobs:
           if (Test-Path $target) { Remove-Item $target -Recurse -Force }
           Copy-Item -LiteralPath 'dist\\NOMIKO' -Destination $target -Recurse
           $exe = Join-Path $target 'NOMIKO.exe'
-          & $exe --self-check
-          $code = $LASTEXITCODE
+          $check = Start-Process -FilePath $exe -ArgumentList '--self-check' -Wait -PassThru
+          $code = $check.ExitCode
           Write-Host "Relocated NOMIKO exit code: $code"
           if ($code -ne 0) {
             $diagnostic = Join-Path $env:TEMP 'NOMIKO-startup-diagnostic.txt'
@@ -118,8 +120,8 @@ jobs:
           if (-not (Test-Path $exe)) { throw 'NOMIKO.exe missing from installed folder.' }
           $passed = $false
           for ($attempt = 1; $attempt -le 4; $attempt++) {
-            & $exe --self-check
-            $code = $LASTEXITCODE
+            $check = Start-Process -FilePath $exe -ArgumentList '--self-check' -Wait -PassThru
+            $code = $check.ExitCode
             Write-Host "Installed NOMIKO startup attempt $attempt exit code: $code"
             if ($code -eq 0) { $passed = $true; break }
             $diagnostic = Join-Path $env:TEMP 'NOMIKO-startup-diagnostic.txt'
