@@ -38,6 +38,9 @@ Section "NOMIKO browser" SEC_MAIN
  IfErrors staging_failed
  IfFileExists "$R8\NOMIKO.exe" stage_ready staging_failed
  stage_ready:
+ ; SetOutPath changes the NSIS working directory. Leave the incoming folder
+ ; before renaming it: Windows will not move a directory used as CWD.
+ SetOutPath "$TEMP"
  ; Never change the running install in place. Renaming an in-use directory
  ; can fail safely; in that case abort without modifying the old installation.
  StrCpy $R7 0
