@@ -2693,6 +2693,52 @@ class BrowserWindow(QMainWindow):
         self.mode_label.setText('PRIVATE  •  NOT ANONYMOUS' if self.private else
                                 f'PROTECTION  •  ADS {counts["ads"]} / TRACKERS {counts["trackers"]}')
 
+    def launch_verified_update(self, installer, release):
+        """Start a verified independent helper, then close only when it is ready."""
+        import hashlib
+        from .updater import update_cache_dir, verify_file
+
+        installer = Path(installer).resolve()
+        if installer.parent != update_cache_dir().resolve() or not verify_file(installer, release):
+            raise OSError('Installer signature/hash cache verification failed. Download it again.')
+        helper = Path(sys.executable).resolve().parent / 'NOMIKO-UpdateHelper.exe'
+        if not getattr(sys, 'frozen', False) or not helper.is_file():
+            raise OSError('NOMIKO update helper is missing. Use the manual setup installer.')
+        cache = update_cache_dir()
+        cache.mkdir(parents=True, exist_ok=True)
+        stamp = f'{os.getpid()}-{time.time_ns()}'
+        staged_helper = cache / f'NOMIKO-UpdateHelper-{stamp}.exe'
+        ready = cache / f'helper-ready-{stamp}.txt'
+        shutil.copy2(helper, staged_helper)
+        command = [
+            str(staged_helper), '--pid', str(os.getpid()),
+            '--installer', str(installer), '--sha256', release.sha256,
+            '--app-dir', str(Path(sys.executable).resolve().parent),
+            '--ready-file', str(ready)
+        ]
+        flags = getattr(subprocess, 'CREATE_NO_WINDOW', 0)
+        proc = subprocess.Popen(command, cwd=str(cache), close_fds=True, creationflags=flags)
+
+        def verify_helper_ready(attempt=0):
+            if ready.is_file():
+                ready.unlink(missing_ok=True)
+                from PySide6.QtWidgets import QApplication
+                QApplication.instance().closeAllWindows()
+                return
+            if proc.poll() is not None or attempt >= 120:
+                if proc.poll() is None:
+                    proc.terminate()
+                diagnostic = cache / 'last-update-status.txt'
+                detail = diagnostic.read_text(encoding='utf-8', errors='replace') if diagnostic.exists() else 'The helper failed to start.'
+                QMessageBox.warning(
+                    self, 'NOMIKO update was not started',
+                    'The browser remains open. ' + detail + '\n\n'
+                    'You can manually run the downloaded installer:\n' + str(installer))
+                return
+            QTimer.singleShot(250, lambda: verify_helper_ready(attempt + 1))
+
+        QTimer.singleShot(250, verify_helper_ready)
+
     def closeEvent(self, event):  # noqa: N802
         # Do not delete live QThread objects. Ask active downloads to cancel and
         # retry after worker termination; keep the GUI responsive meanwhile.
@@ -2706,28 +2752,6 @@ class BrowserWindow(QMainWindow):
             QTimer.singleShot(700, self.close)
             event.ignore()
             return
-        # A separate helper waits for this PID to exit and rechecks the SHA-256
-        # before invoking the per-user NSIS installer. Not executed in Python mode.
-        if self._pending_update:
-            from pathlib import Path
-            installer, expected_sha = self._pending_update
-            helper = Path(sys.executable).resolve().parent / 'NOMIKO-UpdateHelper.exe'
-            if getattr(sys, 'frozen', False) and helper.is_file():
-                flags = getattr(subprocess, 'CREATE_NO_WINDOW', 0)
-                try:
-                    # Run a COPY outside the installation directory so NSIS
-                    # can safely replace the app's own update helper executable.
-                    from .updater import update_cache_dir
-                    temp_helper = update_cache_dir() / 'NOMIKO-UpdateHelper.exe'
-                    temp_helper.parent.mkdir(parents=True, exist_ok=True)
-                    shutil.copy2(helper, temp_helper)
-                    subprocess.Popen([str(temp_helper), '--pid', str(os.getpid()),
-                        '--installer', str(installer), '--sha256', expected_sha,
-                        '--app-dir', str(Path(sys.executable).resolve().parent)],
-                        close_fds=True, creationflags=flags)
-                except OSError as exc:
-                    QMessageBox.warning(self, 'NOMIKO update',
-                        f'The update helper could not start: {exc}. Installer remains in your update cache.')
         app = QApplication.instance()
         if app and hasattr(app, 'windows') and self in app.windows:
             app.windows.remove(self)

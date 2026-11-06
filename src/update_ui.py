@@ -164,6 +164,12 @@ class UpdateCenter(QDialog):
             QMessageBox.StandardButton.No)
         if choice != QMessageBox.StandardButton.Yes:
             return
-        self.browser._pending_update = (self.installer, self.release.sha256)
-        from PySide6.QtWidgets import QApplication
-        QApplication.instance().closeAllWindows()
+        try:
+            self.browser.launch_verified_update(self.installer, self.release)
+        except (OSError, ValueError) as exc:
+            QMessageBox.warning(self, 'NOMIKO update could not start',
+                f'{exc}\n\nThe verified installer remains available at:\n{self.installer}')
+            self.status.setText('Automatic update failed to start. Use the installer shown in the message.')
+            return
+        self.status.setText('Checking update helper before closing NOMIKO…')
+        self.install_button.setEnabled(False)

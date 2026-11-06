@@ -1,5 +1,13 @@
 # NOMIKO changelog
 
+## v0.9.13 Stable
+- Fix the in-app Exit & Install flow by starting and validating an independent updater before closing browser windows.
+- Install into the original NOMIKO folder, even when it contains spaces or was chosen outside the default location. Preserve pinned shortcuts and installed version.
+- Show NSIS installer and actionable errors instead of silently failing in background; log updater status to %LOCALAPPDATA%\\NOMIKO\\updates\\last-update-status.txt.
+- Keep Ed25519 manifest verification plus SHA-256 checks before executing a downloaded installer.
+- Add end-to-end Windows CI helper smoke test, including a custom installation directory.
+
+
 ## v0.9.12 Stable
 - First non-prerelease Stable-channel update, signed using the existing Ed25519 update key and installable from older Alpha releases.
 - Windows rendering defaults to Qt WebEngine's documented GPU-disabled Compatibility mode to mitigate black pages and driver-dependent flickering.

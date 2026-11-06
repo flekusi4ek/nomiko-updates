@@ -130,34 +130,85 @@ def record_update_status(message: str) -> None:
         pass
 
 
+def installer_command(installer: Path, install_dir: Path, silent: bool = False) -> str:
+    """Build the exact NSIS Windows command line.
+
+    NSIS requires /D=<existing folder> as the LAST parameter, literally
+    without quotation marks, even when the folder contains spaces.
+    Python's ordinary list2cmdline would quote the parameter and break /D.
+    """
+    folder = str(install_dir)
+    if not folder or any(c in folder for c in ('"', '\r', '\n')):
+        raise ValueError('Invalid installed browser folder')
+    prefix = subprocess.list2cmdline([str(installer)] + (['/S'] if silent else []))
+    return prefix + ' /D=' + folder
+
+
+def notify_failure(message: str, silent: bool = False) -> None:
+    record_update_status(message)
+    if silent or os.name != 'nt':
+        return
+    try:
+        ctypes.windll.user32.MessageBoxW(
+            None, message + '\n\nIf needed, install NOMIKO manually from GitHub Releases.',
+            'NOMIKO update failed', 0x10)
+    except (OSError, AttributeError):
+        pass
+
+
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument('--pid', type=int, required=True)
     parser.add_argument('--installer', required=True)
     parser.add_argument('--sha256', required=True)
     parser.add_argument('--app-dir', required=True)
+    parser.add_argument('--ready-file', default='')
+    parser.add_argument('--silent', action='store_true', help='CI-only silent installer')
     args = parser.parse_args()
-    if args.pid <= 0 or not installer_is_safe(Path(args.installer), args.sha256):
-        record_update_status('Update aborted: installer verification failed.')
+    installer = Path(args.installer).resolve()
+    app_dir = Path(args.app_dir).resolve()
+    if args.pid <= 0 or not installer_is_safe(installer, args.sha256):
+        notify_failure('Update aborted: installer verification failed.', args.silent)
         return 3
+    if not app_dir.is_dir() or not (app_dir / 'NOMIKO.exe').is_file():
+        notify_failure('Update aborted: could not locate the installed NOMIKO.exe.', args.silent)
+        return 7
+    # Signal that the independent helper is READY before the browser shuts down.
+    # The browser must not exit on a failed or blocked helper launch.
+    if args.ready_file:
+        ready = Path(args.ready_file).resolve()
+        cache = installer.parent
+        if ready.parent != cache:
+            notify_failure('Update aborted: invalid readiness marker.', args.silent)
+            return 8
+        ready.write_text('NOMIKO helper ready', encoding='utf-8')
+    record_update_status('Installer verified; waiting for NOMIKO to close.')
     if not wait_for_pid(args.pid):
-        record_update_status('Update aborted: NOMIKO did not close within the timeout.')
+        notify_failure('Update aborted: NOMIKO did not close. Close all NOMIKO windows.', args.silent)
         return 4
-    if not wait_for_browser_shutdown(Path(args.app_dir)):
-        record_update_status('Update deferred: a NOMIKO or QtWebEngineProcess child is still running.')
+    if not wait_for_browser_shutdown(app_dir):
+        notify_failure('Update deferred: NOMIKO or QtWebEngineProcess is still running. Restart Windows and use the downloaded installer.', args.silent)
         return 6
-    # The browser and its child processes have exited; re-check signed payload.
-    if not installer_is_safe(Path(args.installer), args.sha256):
-        record_update_status('Update aborted: installer checksum mismatch.')
+    if not installer_is_safe(installer, args.sha256):
+        notify_failure('Update aborted: installer checksum mismatch.', args.silent)
         return 5
-    proc = subprocess.run([str(Path(args.installer)), '/S'], timeout=300, check=False)
-    record_update_status('Update installed.' if proc.returncode == 0
-                         else f'Installer failed with code {proc.returncode}.')
+    record_update_status('NOMIKO closed; starting installer in the original installation folder.')
+    # Visible by default: display actual NSIS errors instead of silently
+    # swallowing them. /D preserves custom install paths and pinned shortcuts.
+    command = installer_command(installer, app_dir, args.silent)
+    proc = subprocess.run(command, timeout=600, check=False)
+    if proc.returncode == 0 and (app_dir / 'NOMIKO.exe').is_file():
+        record_update_status('Update installed.')
+    else:
+        notify_failure(f'Installer failed with code {proc.returncode}. Installation folder: {app_dir}', args.silent)
     return proc.returncode
 
 
 if __name__ == '__main__':
     try:
         sys.exit(main())
-    except Exception:
+    except Exception as exc:
+        import traceback
+        record_update_status('Updater error: ' + str(exc) + '\n' + traceback.format_exc())
+        notify_failure('NOMIKO updater encountered an error: ' + str(exc))
         sys.exit(10)

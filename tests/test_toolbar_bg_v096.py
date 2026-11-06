@@ -1,4 +1,4 @@
-"""NOMIKO v0.9.12: right-aligned window controls and first-frame theme regression."""
+"""NOMIKO v0.9.13: right-aligned window controls and first-frame theme regression."""
 import unittest
 from pathlib import Path
 
@@ -65,5 +65,5 @@ class ToolbarTests(unittest.TestCase):
 class ReleaseTests(unittest.TestCase):
     def test_release_version(self):
         from src.update_trust import CURRENT_VERSION
-        self.assertEqual(CURRENT_VERSION, '0.9.12')
-        self.assertEqual((ROOT / '.github/release-request.txt').read_text().strip(), 'PUBLISH v0.9.12')
+        self.assertEqual(CURRENT_VERSION, '0.9.13')
+        self.assertEqual((ROOT / '.github/release-request.txt').read_text().strip(), 'PUBLISH v0.9.13')
