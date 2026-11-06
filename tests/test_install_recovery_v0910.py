@@ -29,7 +29,7 @@ class InstallerRecoveryTests(TestCase):
         helper = (ROOT / 'update_helper.py').read_text()
         ui = (ROOT / 'src/ui.py').read_text()
         self.assertIn("'qtwebengineprocess.exe'", helper)
-        self.assertIn('wait_for_browser_shutdown(Path(args.app_dir))', helper)
+        self.assertIn('wait_for_browser_shutdown(app_dir)', helper)
         self.assertIn("'--app-dir', str(Path(sys.executable).resolve().parent)", ui)
 
     def test_shutdown_wait_is_bounded_and_checks_again(self):
