@@ -36,6 +36,7 @@ DEFAULT_SETTINGS = {
     'clean_tracking_links': True,
     'block_exceptions': [],
     'performance_mode': 'balanced',
+    'graphics_mode': 'compatibility',  # Qt WebEngine software GPU fallback.
     'updates_channel': 'stable',
     'default_zoom': 100,
     'zoom_text_only': False,

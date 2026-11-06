@@ -867,6 +867,12 @@ class BrowserView(QWebEngineView):
         apply_zoom_to_view(self, browser.store.settings)
         self.loadFinished.connect(
             lambda _ok: apply_zoom_to_view(self, browser.store.settings))
+        # QStackedWidget may show a WebEngine surface before first paint.
+        self.loadFinished.connect(
+            lambda _ok, v=self: QTimer.singleShot(
+                0, lambda: self.browser._refresh_visible_webview(v)))
+        self.page().renderProcessTerminated.connect(
+            lambda status, code, v=self: browser.on_renderer_terminated(v, status, code))
 
     def apply_media_policy(self, url=None):
         url = url if isinstance(url, QUrl) else self.url()
@@ -908,6 +914,7 @@ class BrowserWindow(QMainWindow):
         self._skip_final_session_save = False
         self._settings_panes = []
         self._idle_since = {}
+        self._renderer_recovery = {}
         self._session_timer = QTimer(self)
         self._session_timer.setSingleShot(True)
         self._session_timer.setInterval(900)
@@ -1165,6 +1172,7 @@ class BrowserWindow(QMainWindow):
         view.iconChanged.connect(lambda icon, v=view: self.on_tab_icon(v, icon))
         self.tabs.setCurrentIndex(index)
         self.tabs.setTabIcon(index, self._nomiko_icon())
+        QTimer.singleShot(0, lambda v=view: self._refresh_visible_webview(v, focus=True))
         view.titleChanged.connect(lambda title, v=view: self.on_tab_title(v, title))
         view.urlChanged.connect(lambda new_url, v=view: self.on_url_changed(v, new_url))
         view.loadFinished.connect(lambda ok, v=view: self.on_page_loaded(v, ok))
@@ -1212,6 +1220,7 @@ class BrowserWindow(QMainWindow):
                 self._recently_closed = self._recently_closed[-15:]
         self.tabs.removeTab(index)
         self._idle_since.pop(view, None)
+        self._renderer_recovery.pop(view, None)
         view.deleteLater()
         self.status.setText(self.t('Ready'))
         self._queue_session_save()
@@ -1226,13 +1235,52 @@ class BrowserWindow(QMainWindow):
         if isinstance(view, BrowserView):
             self._idle_since[view] = time.monotonic()
             try:
-                view.page().setLifecycleState(QWebEnginePage.LifecycleState.Active)
+                if view.page().lifecycleState() != QWebEnginePage.LifecycleState.Active:
+                    view.page().setLifecycleState(QWebEnginePage.LifecycleState.Active)
             except RuntimeError:
                 pass
+            QTimer.singleShot(0, lambda v=view: self._refresh_visible_webview(v, focus=True))
+            QTimer.singleShot(90, lambda v=view: self._refresh_visible_webview(v))
         if view is not None:
             self.update_address(view)
             self.update_bookmark_button()
         self._queue_session_save()
+
+    def _refresh_visible_webview(self, view, focus=False):
+        """Repaint only the visible WebEngine compositor without reloading tabs."""
+        try:
+            if not self.isVisible() or view is not self.current_view():
+                return
+            if not view.isVisible():
+                return
+            if focus:
+                view.setFocus(Qt.FocusReason.OtherFocusReason)
+            view.update()
+            self.tabs.stack.update()
+        except RuntimeError:
+            return
+
+    def on_renderer_terminated(self, view, status, exit_code):
+        """A crashed Chromium renderer loses its surface until page reload."""
+        if self.tabs.indexOf(view) < 0:
+            return
+        self.status.setText('Website renderer stopped. Recovering this tab…')
+        now = time.monotonic()
+        previous = self._renderer_recovery.get(view, 0)
+        if now - previous < 45:
+            self.status.setText('Website renderer stopped repeatedly. Try Compatibility graphics in Settings.')
+            return
+        self._renderer_recovery[view] = now
+
+        def recover():
+            try:
+                if self.tabs.indexOf(view) >= 0:
+                    view.reload()
+                    self._refresh_visible_webview(view)
+            except RuntimeError:
+                pass
+
+        QTimer.singleShot(500, recover)
 
     def _nomiko_icon(self, letter='N'):
         """Visible fallback icon for internal pages and favicon-only tabs."""
