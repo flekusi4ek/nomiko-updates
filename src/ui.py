@@ -35,6 +35,7 @@ from .windows_integration import open_windows_default_apps
 from .tab_drag import drop_index, neighbor_shift
 from .tab_layout import fitted_tab_width
 from .media_compat import is_soundcloud_host, playback_requires_gesture, missing_soundcloud_codecs
+from .soundcloud_help import SoundCloudHelpDialog
 from .update_trust import CURRENT_VERSION
 from .update_ui import UpdateCenter, UpdateWorker
 from .productivity import safe_web_url, render_reader
@@ -1680,6 +1681,10 @@ class BrowserWindow(QMainWindow):
             if key in ('new_tab', 'downloads'):
                 menu.addSeparator()
         menu.addSeparator()
+        current = self.current_view()
+        if isinstance(current, BrowserView) and is_soundcloud_host(current.url().host()):
+            menu.addAction('SoundCloud · Playback help…', self.show_soundcloud_playback_help)
+            menu.addSeparator()
         tools = menu.addMenu(self.t('Tools'))
         for name, callback in [
             ('Find open tab…', self.find_open_tab),
@@ -1693,6 +1698,19 @@ class BrowserWindow(QMainWindow):
             tools.addAction(self.t(name), callback)
         menu.addAction(self.t('Make NOMIKO default browser'), self.show_default_browser_settings)
         menu.exec(self.menu_btn.mapToGlobal(self.menu_btn.rect().bottomLeft()))
+
+    def show_soundcloud_playback_help(self):
+        """Open local playback diagnostics without disabling protection globally."""
+        view = self.current_view()
+        if not isinstance(view, BrowserView) or not is_soundcloud_host(view.url().host()):
+            return
+        existing = getattr(self, '_soundcloud_help', None)
+        if existing is not None and existing.isVisible():
+            existing.raise_()
+            existing.activateWindow()
+            return
+        self._soundcloud_help = SoundCloudHelpDialog(self, view)
+        self._soundcloud_help.show()
 
     def open_profile_folder(self):
         """Open NOMIKO's local profile without exposing it to a website."""

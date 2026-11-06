@@ -1,5 +1,12 @@
 # NOMIKO changelog
 
+## v0.9.11 Alpha
+- Added a non-modal SoundCloud playback help dialog, shown only on SoundCloud pages, with local media format/error diagnostics.
+- Added a reversible SoundCloud-only ad/tracker filter exception with explicit consent; other sites remain protected.
+- Diagnose only aggregated blocked-request counts; do not collect track URLs, login information or cookies.
+- Retained safe Windows upgrades, signed updates, and adaptive tabs.
+
+
 ## v0.9.10 Alpha
 - Prevent DLL sharing violations during upgrades by staging a complete app copy and replacing the install directory only after extraction completes.
 - If replacing the application directory fails (files still in use), abort safely without overwriting individual Qt binaries; restore the old directory if a final swap fails.

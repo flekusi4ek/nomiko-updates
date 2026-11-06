@@ -54,8 +54,8 @@ class WindowsRegistrationTests(unittest.TestCase):
         self.assertIn('show_default_browser_settings', (ROOT / 'src/ui.py').read_text())
 
     def test_version(self):
-        self.assertEqual(CURRENT_VERSION, '0.9.10')
-        self.assertEqual((ROOT / '.github/release-request.txt').read_text().strip(), 'PUBLISH v0.9.10-alpha')
+        self.assertEqual(CURRENT_VERSION, '0.9.11')
+        self.assertEqual((ROOT / '.github/release-request.txt').read_text().strip(), 'PUBLISH v0.9.11-alpha')
 
 
 class MinimalUiTests(unittest.TestCase):

@@ -7,6 +7,7 @@ from threading import Lock
 from PySide6.QtWebEngineCore import QWebEngineUrlRequestInterceptor, QWebEngineUrlRequestInfo
 from .blocklists import blocked_by, matches_domain, AD_DOMAINS, TRACKER_DOMAINS
 from .module_packs import match_host
+from .media_compat import is_soundcloud_host
 
 TRACKER_HOSTS = TRACKER_DOMAINS  # compatibility with older tests
 
@@ -23,6 +24,7 @@ class TrackerInterceptor(QWebEngineUrlRequestInterceptor):
         self.exceptions = tuple(exceptions or ())
         self._custom_hosts = frozenset()
         self._count = {'ads': 0, 'trackers': 0}
+        self._soundcloud_blocked = 0
         self._guard = Lock()
 
     def configure(self, tracker_enabled, adblock_enabled, exceptions=(), referrer_policy='normal'):
@@ -40,6 +42,11 @@ class TrackerInterceptor(QWebEngineUrlRequestInterceptor):
     def counts(self):
         with self._guard:
             return dict(self._count)
+
+    def soundcloud_block_count(self):
+        """Aggregate blocked requests only; never store private track URLs."""
+        with self._guard:
+            return self._soundcloud_blocked
 
     def interceptRequest(self, info):
         policy = getattr(self, '_policy', (self.enabled, self.adblock, self.exceptions))
@@ -60,3 +67,5 @@ class TrackerInterceptor(QWebEngineUrlRequestInterceptor):
             info.block(True)
             with self._guard:
                 self._count[reason] += 1
+                if is_soundcloud_host(first_party):
+                    self._soundcloud_blocked += 1
