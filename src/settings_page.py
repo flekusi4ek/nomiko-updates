@@ -210,7 +210,7 @@ class SettingsPane(QWidget):
         enabled.setChecked(s.get('updates_auto_check', True))
         enabled.toggled.connect(lambda state: self.set_preference(updates_auto_check=state))
         box.addWidget(enabled)
-        channel = self.combo([('alpha', 'Alpha and Stable'), ('stable', 'Stable only')], s.get('updates_channel', 'alpha'))
+        channel = self.combo([('alpha', 'Alpha and Stable'), ('stable', 'Stable only')], s.get('updates_channel', 'stable'))
         channel.currentIndexChanged.connect(lambda _: self.set_preference(updates_channel=channel.currentData()))
         self.row(box, 'Release channel', channel)
         self.note(box, 'Checks contact GitHub and disclose your network IP to GitHub. No browsing history or bookmarks are sent.')
@@ -445,6 +445,14 @@ class SettingsPane(QWidget):
 
         # RESOURCE SAVER
         box = self.section('Performance')
+        rendering = self.combo([
+            ('compatibility', 'Compatibility · fixes black screens'),
+            ('hardware', 'Hardware acceleration · faster'),
+        ], s.get('graphics_mode', 'compatibility'))
+        rendering.currentIndexChanged.connect(
+            lambda _: self.set_preference(graphics_mode=rendering.currentData()))
+        self.row(box, 'Website graphics', rendering)
+        self.note(box, 'Compatibility disables Chromium GPU acceleration to avoid black pages on some Windows drivers. Hardware can be faster for video/WebGL but may flicker. Restart NOMIKO after changing this setting.')
         perf = self.combo([('off', 'Off · keep tabs active'),
                            ('balanced', 'Balanced · keep tabs active'),
                            ('gaming', 'Gaming · keep tabs active'),
@@ -538,8 +546,8 @@ class SettingsPane(QWidget):
 
         # ABOUT
         box = self.section('About')
-        from .update_trust import CURRENT_VERSION
-        self.note(box, f'NOMIKO v{CURRENT_VERSION} Alpha · independent Windows 11 browser. Powered by Qt WebEngine / Chromium.')
+        from .update_trust import CURRENT_VERSION, CURRENT_CHANNEL
+        self.note(box, f'NOMIKO v{CURRENT_VERSION} {CURRENT_CHANNEL.title()} · independent Windows 11 browser. Powered by Qt WebEngine / Chromium.')
         box.addWidget(self.button('Detailed information', self.browser.show_about))
 
         self.category_list.blockSignals(False)

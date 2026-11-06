@@ -36,7 +36,7 @@ from .tab_drag import drop_index, neighbor_shift
 from .tab_layout import fitted_tab_width
 from .media_compat import is_soundcloud_host, playback_requires_gesture, missing_soundcloud_codecs
 from .soundcloud_help import SoundCloudHelpDialog
-from .update_trust import CURRENT_VERSION
+from .update_trust import CURRENT_VERSION, CURRENT_CHANNEL
 from .update_ui import UpdateCenter, UpdateWorker
 from .productivity import safe_web_url, render_reader
 from .advanced_ui import import_export_dialog, WorkspaceDialog, VaultDialog, SplitViewTab
@@ -2377,7 +2377,7 @@ class BrowserWindow(QMainWindow):
         dialog.setWindowTitle('About NOMIKO')
         dialog.resize(670, 520)
         root = QVBoxLayout(dialog)
-        heading = QLabel(f'NOMIKO   /   v{CURRENT_VERSION} Alpha')
+        heading = QLabel(f'NOMIKO   /   v{CURRENT_VERSION} {CURRENT_CHANNEL.title()}')
         heading.setObjectName('sectionHeading')
         root.addWidget(heading)
         copy = (
@@ -2430,7 +2430,7 @@ class BrowserWindow(QMainWindow):
         # Asynchronous and non-blocking; never initiate an installation silently.
         if not self.isVisible() or self.private:
             return
-        worker = UpdateWorker('check', channel=self.store.settings.get('updates_channel', 'alpha'), parent=self)
+        worker = UpdateWorker('check', channel=self.store.settings.get('updates_channel', 'stable'), parent=self)
         self._update_workers.append(worker)
         worker.result.connect(self._on_startup_update_result)
         worker.finished.connect(lambda w=worker: self._on_update_worker_finished(w))

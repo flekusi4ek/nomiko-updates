@@ -7,6 +7,7 @@ from PySide6.QtWidgets import QApplication
 from src.windows_integration import launch_target
 from src.storage import Store
 from src.theme_background import page_background
+from src.rendering import configure_webengine
 
 def icon_path() -> Path:
     bundle = Path(getattr(sys, '_MEIPASS', Path(__file__).resolve().parent))
@@ -41,6 +42,8 @@ def write_startup_diagnostic():
 
 
 def main():
+    # Apply the Qt WebEngine graphics backend before loading its native modules.
+    configure_webengine(Store().settings)
     # CI and normal startup must exercise the exact same native DLL load path.
     if '--self-check' in sys.argv:
         try:

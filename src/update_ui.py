@@ -9,7 +9,7 @@ from PySide6.QtCore import QThread, Signal, Qt, QUrl
 from PySide6.QtGui import QDesktopServices
 from PySide6.QtWidgets import QCheckBox, QComboBox, QDialog, QHBoxLayout, QLabel, QMessageBox, QProgressBar, QPushButton, QVBoxLayout
 
-from .update_trust import CURRENT_VERSION
+from .update_trust import CURRENT_VERSION, CURRENT_CHANNEL
 from .updater import find_update, download_installer, UpdateError
 
 
@@ -18,7 +18,7 @@ class UpdateWorker(QThread):
     failed = Signal(str)
     progress_changed = Signal(int)
 
-    def __init__(self, job, *, channel='alpha', release=None, parent=None):
+    def __init__(self, job, *, channel='stable', release=None, parent=None):
         super().__init__(parent)
         self.job, self.channel, self.release = job, channel, release
 
@@ -51,7 +51,7 @@ class UpdateCenter(QDialog):
         self.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose, False)
         root = QVBoxLayout(self)
         root.setSpacing(10)
-        root.addWidget(QLabel(f'NOMIKO {CURRENT_VERSION} Alpha'))
+        root.addWidget(QLabel(f'NOMIKO {CURRENT_VERSION} {CURRENT_CHANNEL.title()}'))
         description = QLabel('Official releases: flekusi4ek/nomiko-updates.\nEvery update must pass Ed25519 signature and SHA-256 checks. Your browsing data stays local.')
         description.setWordWrap(True)
         root.addWidget(description)
@@ -59,7 +59,7 @@ class UpdateCenter(QDialog):
         row.addWidget(QLabel('Channel'))
         self.channel = QComboBox()
         self.channel.addItems(['alpha', 'stable'])
-        self.channel.setCurrentText(browser.store.settings.get('updates_channel', 'alpha'))
+        self.channel.setCurrentText(browser.store.settings.get('updates_channel', 'stable'))
         self.channel.currentTextChanged.connect(lambda value: browser.update_preference(updates_channel=value))
         row.addWidget(self.channel)
         row.addStretch()

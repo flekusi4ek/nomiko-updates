@@ -1,11 +1,11 @@
 Unicode True
 !include "MUI2.nsh"
 !define APPNAME "NOMIKO"
-!define VERSION "0.9.11"
+!define VERSION "0.9.12"
 !define MUI_ICON "..\assets\NOMIKO.ico"
 !define MUI_UNICON "..\assets\NOMIKO.ico"
-Name "${APPNAME} ${VERSION} Alpha"
-OutFile "NOMIKO-Setup-0.9.11-alpha.exe"
+Name "${APPNAME} ${VERSION} Stable"
+OutFile "NOMIKO-Setup-0.9.12.exe"
 InstallDir "$LOCALAPPDATA\Programs\NOMIKO"
 RequestExecutionLevel user
 SetCompressor /SOLID lzma
@@ -125,7 +125,7 @@ Section "NOMIKO browser" SEC_MAIN
  CreateShortCut "$SMPROGRAMS\NOMIKO\NOMIKO.lnk" "$INSTDIR\NOMIKO.exe" "" "$INSTDIR\NOMIKO.ico" 0
  CreateShortCut "$SMPROGRAMS\NOMIKO\Uninstall.lnk" "$INSTDIR\Uninstall.exe"
  CreateShortCut "$DESKTOP\NOMIKO.lnk" "$INSTDIR\NOMIKO.exe" "" "$INSTDIR\NOMIKO.ico" 0
- WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\NOMIKO" "DisplayName" "NOMIKO ${VERSION} Alpha"
+ WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\NOMIKO" "DisplayName" "NOMIKO ${VERSION} Stable"
  WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\NOMIKO" "DisplayIcon" "$INSTDIR\NOMIKO.ico"
  WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\NOMIKO" "UninstallString" '"$INSTDIR\Uninstall.exe"'
  WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\NOMIKO" "InstallLocation" "$INSTDIR"

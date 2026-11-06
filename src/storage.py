@@ -36,6 +36,7 @@ DEFAULT_SETTINGS = {
     'clean_tracking_links': True,
     'block_exceptions': [],
     'performance_mode': 'balanced',
+    'updates_channel': 'stable',
     'default_zoom': 100,
     'zoom_text_only': False,
     'pause_background_media': False,
@@ -136,6 +137,12 @@ def _save(path: Path, value):
 class Store:
     def __init__(self):
         self.settings = {**DEFAULT_SETTINGS, **_load(SETTINGS_FILE, {})}
+        # Move former Alpha installations to Stable once, as requested.
+        # An explicitly selected channel remains persistent thereafter.
+        if not self.settings.get('_v0912_stable_channel_migrated', False):
+            self.settings['updates_channel'] = 'stable'
+            self.settings['_v0912_stable_channel_migrated'] = True
+            self.save_settings()
         # Preserve the user's explicit search choice. Do not silently migrate
         # DuckDuckGo to NOMIKO Search (older alpha did that by mistake).
         if self.settings.get('search_engine') not in ('DuckDuckGo', 'NOMIKO Search', 'Google'):

@@ -95,8 +95,11 @@ def verify_manifest(raw: bytes, signature_b64: bytes, *, expected_tag: str) -> R
             raise ValueError('Manifest tag mismatch')
         if channel not in ('alpha', 'stable'):
             raise ValueError('Invalid channel')
-        if not INSTALLER_PATTERN.fullmatch(asset) or not asset.startswith(f'NOMIKO-Setup-{version}'):
-            raise ValueError('Invalid installer name')
+        expected_asset = f'NOMIKO-Setup-{version}' + ('-alpha.exe' if channel == 'alpha' else '.exe')
+        expected_release_tag = 'v' + version + ('-alpha' if channel == 'alpha' else '')
+        if (not INSTALLER_PATTERN.fullmatch(asset) or asset != expected_asset
+                or tag != expected_release_tag):
+            raise ValueError('Invalid installer or channel identity')
         if (not isinstance(sha, str) or re.fullmatch('[a-f0-9]{64}', sha) is None
                 or type(size) is not int or not (0 < size <= MAX_INSTALLER)):
             raise ValueError('Invalid installer checksum/size')

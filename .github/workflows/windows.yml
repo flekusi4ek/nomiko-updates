@@ -90,6 +90,12 @@ jobs:
             throw 'Relocated NOMIKO failed to load Qt.'
           }
 
+      - name: Smoke-test first-frame rendering and tab switching
+        shell: pwsh
+        run: |
+          python tools/gui_smoke.py
+          if ($LASTEXITCODE -ne 0) { throw 'GUI web compositor smoke test failed.' }
+
       - name: Build independent update helper
         shell: pwsh
         run: |
@@ -105,15 +111,15 @@ jobs:
         run: |
           & 'C:\Program Files (x86)\NSIS\makensis.exe' installer\NOMIKO.nsi
           if ($LASTEXITCODE -ne 0) { throw "NSIS installer failed." }
-          $found = Get-ChildItem -Path . -Recurse -File -Filter 'NOMIKO-Setup-0.9.11-alpha.exe' | Select-Object -First 1
+          $found = Get-ChildItem -Path . -Recurse -File -Filter 'NOMIKO-Setup-0.9.12.exe' | Select-Object -First 1
           if (-not $found) { throw "Installer was not generated." }
-          $target = Join-Path (Get-Location).Path 'NOMIKO-Setup-0.9.11-alpha.exe'
+          $target = Join-Path (Get-Location).Path 'NOMIKO-Setup-0.9.12.exe'
           if ($found.FullName -ne $target) { Copy-Item -LiteralPath $found.FullName -Destination $target -Force }
 
       - name: Smoke-test installed NOMIKO
         shell: pwsh
         run: |
-          $installer = Join-Path (Get-Location).Path 'NOMIKO-Setup-0.9.11-alpha.exe'
+          $installer = Join-Path (Get-Location).Path 'NOMIKO-Setup-0.9.12.exe'
           $proc = Start-Process -FilePath $installer -ArgumentList '/S' -Wait -PassThru
           if ($proc.ExitCode -ne 0) { throw "Silent installer failed with code $($proc.ExitCode)" }
           $exe = Join-Path $env:LOCALAPPDATA 'Programs\\NOMIKO\\NOMIKO.exe'
@@ -150,7 +156,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           $version = python -c 'from src.update_trust import CURRENT_VERSION; print(CURRENT_VERSION)'
-          $tag = "v$version-alpha"
+          $tag = "v$version"
           if (!(Test-Path '.github/release-request.txt')) {
             'publish=false' >> $env:GITHUB_OUTPUT
             exit 0
@@ -178,7 +184,7 @@ jobs:
         run: |
           if (-not $env:NOMIKO_SIGNING_KEY_B64) { throw 'NOMIKO_SIGNING_KEY_B64 is missing' }
           $version = '${{ steps.gate.outputs.version }}'
-          python tools/sign_release.py --version $version --channel alpha --installer "NOMIKO-Setup-$version-alpha.exe" --out release --notes 'Safer staged installation, rollback, and Qt WebEngine startup checks.'
+          python tools/sign_release.py --version $version --channel stable --installer "NOMIKO-Setup-$version.exe" --out release --notes 'Software compatibility rendering, tab first-frame recovery, and stable update channel.'
           if ($LASTEXITCODE -ne 0) { throw 'Signing failed' }
 
       - name: Publish signed GitHub Release
@@ -189,5 +195,5 @@ jobs:
         run: |
           $tag = '${{ steps.gate.outputs.tag }}'
           $version = '${{ steps.gate.outputs.version }}'
-          gh release create $tag "NOMIKO-Setup-$version-alpha.exe" NOMIKO-Windows-portable.zip release/update.json release/update.sig --repo '${{ github.repository }}' --target '${{ github.sha }}' --title "NOMIKO $version Alpha" --notes 'Staged installer, Qt WebEngine startup smoke tests, and safer updates. Experimental alpha; no Authenticode code signature.' --prerelease
+          gh release create $tag "NOMIKO-Setup-$version.exe" NOMIKO-Windows-portable.zip release/update.json release/update.sig --repo '${{ github.repository }}' --target '${{ github.sha }}' --title "NOMIKO $version Stable" --notes 'Stable-channel release: fallback graphics rendering and tab repaint fixes; signed update manifest. No Authenticode code signature.'
           if ($LASTEXITCODE -ne 0) { throw 'Publishing release failed' }

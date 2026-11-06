@@ -1,5 +1,15 @@
 # NOMIKO changelog
 
+## v0.9.12 Stable
+- First non-prerelease Stable-channel update, signed using the existing Ed25519 update key and installable from older Alpha releases.
+- Windows rendering defaults to Qt WebEngine's documented GPU-disabled Compatibility mode to mitigate black pages and driver-dependent flickering.
+- Performance settings expose a restart-required Hardware mode for faster graphics on machines without rendering glitches.
+- New and reactivated tabs request a first frame and compositor repaint automatically, instead of requiring a mouse click. No automatic discard/reload of healthy tabs.
+- A terminated Chromium renderer is recovered once with a bounded retry, with a visible warning on repeated crashes.
+- Windows CI adds an interactive Qt WebEngine home/new tab/tab-switch rendering smoke test before publication.
+- Installer preserves the existing profile, cookies, tabs and signed update checks. Some site-specific graphics failures may remain until tested on affected devices.
+
+
 ## v0.9.11 Alpha
 - Added a non-modal SoundCloud playback help dialog, shown only on SoundCloud pages, with local media format/error diagnostics.
 - Added a reversible SoundCloud-only ad/tracker filter exception with explicit consent; other sites remain protected.
