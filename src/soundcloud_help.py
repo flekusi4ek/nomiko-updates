@@ -23,7 +23,7 @@ def playback_summary(result, blocked, allowlisted, muted):
         lines.append('Audio check unavailable; reload the page and try again.')
     lines.append(f'SoundCloud-page requests blocked by NOMIKO this session: {blocked}')
     lines.append('SoundCloud site filter: ' + ('off' if allowlisted else 'on'))
-    lines.append('If only Likes fail, try the same track on its direct page or in another browser.')
+    lines.append('If Likes fail, try Play in NOMIKO beside a public track. Private, region-blocked or protected tracks may be unavailable.')
     return '\n'.join(lines)
 
 

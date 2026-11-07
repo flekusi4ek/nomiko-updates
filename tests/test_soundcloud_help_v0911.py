@@ -32,7 +32,7 @@ class SoundCloudHelpTests(unittest.TestCase):
 
     def test_current_version(self):
         from src.update_trust import CURRENT_VERSION
-        self.assertEqual(CURRENT_VERSION, '0.9.15')
+        self.assertEqual(CURRENT_VERSION, '0.9.16')
 
 
 if __name__ == '__main__':

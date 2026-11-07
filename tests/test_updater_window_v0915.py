@@ -1,4 +1,4 @@
-"""Regression tests for the standalone NOMIKO 0.9.15 update window."""
+"""Regression tests for the standalone NOMIKO 0.9.16 update window."""
 from __future__ import annotations
 
 from pathlib import Path
@@ -38,7 +38,7 @@ class StandaloneUpdateTests(TestCase):
             app = Path(tmp) / 'NOMIKO Custom Folder'
             app.mkdir()
             (app / 'NOMIKO.exe').touch()
-            installer = Path(tmp) / 'NOMIKO-Setup-0.9.15.exe'
+            installer = Path(tmp) / 'NOMIKO-Setup-0.9.16.exe'
             statuses = []
             args = SimpleNamespace(sha256='a' * 64)
             with mock.patch.object(update_helper, 'wait_for_browser_shutdown', return_value=True), \
@@ -64,7 +64,7 @@ class StandaloneUpdateTests(TestCase):
                  mock.patch.object(update_helper, 'record_update_status'), \
                  mock.patch.object(update_helper.subprocess, 'run') as run:
                 code = update_helper.perform_install(
-                    SimpleNamespace(sha256='b' * 64), app / 'NOMIKO-Setup-0.9.15.exe',
+                    SimpleNamespace(sha256='b' * 64), app / 'NOMIKO-Setup-0.9.16.exe',
                     app, silent_installer=True,
                     progress=lambda stage, message: statuses.append((stage, message)))
             self.assertEqual(code, 6)
@@ -81,7 +81,7 @@ class StandaloneUpdateTests(TestCase):
 
     def test_version_is_stable(self):
         from src.update_trust import CURRENT_VERSION, CURRENT_CHANNEL
-        self.assertEqual(CURRENT_VERSION, '0.9.15')
+        self.assertEqual(CURRENT_VERSION, '0.9.16')
         self.assertEqual(CURRENT_CHANNEL, 'stable')
         self.assertEqual((ROOT / '.github/release-request.txt').read_text().strip(),
-                         'PUBLISH v0.9.15')
+                         'PUBLISH v0.9.16')

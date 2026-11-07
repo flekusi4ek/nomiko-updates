@@ -42,6 +42,9 @@ def write_startup_diagnostic():
 
 
 def main():
+    # Always use Qt Multimedia's independent FFmpeg backend for media fallback.
+    # This does not launch Edge, WebView2 or Windows Media Foundation.
+    os.environ['QT_MEDIA_BACKEND'] = 'ffmpeg'
     # Apply the Qt WebEngine graphics backend before loading its native modules.
     configure_webengine(Store().settings)
     # CI and normal startup must exercise the exact same native DLL load path.

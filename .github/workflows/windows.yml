@@ -55,10 +55,16 @@ jobs:
         shell: pwsh
         run: python -m unittest discover -s tests -q
 
+      - name: Smoke-test Qt Multimedia FFmpeg backend
+        shell: pwsh
+        run: |
+          python tools/native_media_smoke.py
+          if ($LASTEXITCODE -ne 0) { throw 'Qt FFmpeg media backend failed offline audio playback' }
+
       - name: Build NOMIKO
         shell: pwsh
         run: |
-          python -m PyInstaller --noconfirm --clean --windowed --onedir --name NOMIKO --icon assets/NOMIKO.ico --add-data 'assets/NOMIKO.ico;assets' --collect-all PySide6.QtWebEngineCore --collect-all PySide6.QtWebEngineWidgets --collect-all cryptography main.py
+          python -m PyInstaller --noconfirm --clean --windowed --onedir --name NOMIKO --icon assets/NOMIKO.ico --add-data 'assets/NOMIKO.ico;assets' --collect-all PySide6.QtWebEngineCore --collect-all PySide6.QtWebEngineWidgets --collect-all PySide6.QtMultimedia --collect-all PySide6.QtMultimediaWidgets --collect-all yt_dlp --collect-all cryptography main.py
 
       - name: Smoke-test packaged Qt WebEngine imports
         shell: pwsh
@@ -118,15 +124,15 @@ jobs:
         run: |
           & 'C:\Program Files (x86)\NSIS\makensis.exe' installer\NOMIKO.nsi
           if ($LASTEXITCODE -ne 0) { throw "NSIS installer failed." }
-          $found = Get-ChildItem -Path . -Recurse -File -Filter 'NOMIKO-Setup-0.9.15.exe' | Select-Object -First 1
+          $found = Get-ChildItem -Path . -Recurse -File -Filter 'NOMIKO-Setup-0.9.16.exe' | Select-Object -First 1
           if (-not $found) { throw "Installer was not generated." }
-          $target = Join-Path (Get-Location).Path 'NOMIKO-Setup-0.9.15.exe'
+          $target = Join-Path (Get-Location).Path 'NOMIKO-Setup-0.9.16.exe'
           if ($found.FullName -ne $target) { Copy-Item -LiteralPath $found.FullName -Destination $target -Force }
 
       - name: Smoke-test installed NOMIKO
         shell: pwsh
         run: |
-          $installer = Join-Path (Get-Location).Path 'NOMIKO-Setup-0.9.15.exe'
+          $installer = Join-Path (Get-Location).Path 'NOMIKO-Setup-0.9.16.exe'
           $proc = Start-Process -FilePath $installer -ArgumentList '/S' -Wait -PassThru
           if ($proc.ExitCode -ne 0) { throw "Silent installer failed with code $($proc.ExitCode)" }
           $exe = Join-Path $env:LOCALAPPDATA 'Programs\\NOMIKO\\NOMIKO.exe'
@@ -146,7 +152,7 @@ jobs:
       - name: Verify in-app update helper upgrades the original custom folder
         shell: pwsh
         run: |
-          $setup = Join-Path (Get-Location).Path 'NOMIKO-Setup-0.9.15.exe'
+          $setup = Join-Path (Get-Location).Path 'NOMIKO-Setup-0.9.16.exe'
           $custom = Join-Path $env:LOCALAPPDATA 'Programs\\NOMIKO Custom Folder'
           $initial = Start-Process -FilePath $setup -ArgumentList "/S /D=$custom" -Wait -PassThru
           if ($initial.ExitCode -ne 0) { throw "Custom-folder initial installation failed: $($initial.ExitCode)" }
@@ -156,7 +162,7 @@ jobs:
           Set-Content -Path $marker -Value 'Previous version folder marker'
           $cache = Join-Path $env:LOCALAPPDATA 'NOMIKO\\updates'
           New-Item -ItemType Directory -Force -Path $cache | Out-Null
-          $cachedSetup = Join-Path $cache 'NOMIKO-Setup-0.9.15.exe'
+          $cachedSetup = Join-Path $cache 'NOMIKO-Setup-0.9.16.exe'
           Copy-Item -LiteralPath $setup -Destination $cachedSetup -Force
           $sha = (Get-FileHash -LiteralPath $cachedSetup -Algorithm SHA256).Hash.ToLowerInvariant()
           $helper = Join-Path (Get-Location).Path 'helper-dist\\NOMIKO-UpdateHelper.exe'
@@ -225,7 +231,7 @@ jobs:
         run: |
           if (-not $env:NOMIKO_SIGNING_KEY_B64) { throw 'NOMIKO_SIGNING_KEY_B64 is missing' }
           $version = '${{ steps.gate.outputs.version }}'
-          python tools/sign_release.py --version $version --channel stable --installer "NOMIKO-Setup-$version.exe" --out release --notes 'Standalone installer progress window and launch button after browser closes.'
+          python tools/sign_release.py --version $version --channel stable --installer "NOMIKO-Setup-$version.exe" --out release --notes 'Qt Multimedia FFmpeg fallback for video and SoundCloud public tracks, no Edge or WebView2.'
           if ($LASTEXITCODE -ne 0) { throw 'Signing failed' }
 
       - name: Publish signed GitHub Release
@@ -236,5 +242,5 @@ jobs:
         run: |
           $tag = '${{ steps.gate.outputs.tag }}'
           $version = '${{ steps.gate.outputs.version }}'
-          gh release create $tag "NOMIKO-Setup-$version.exe" NOMIKO-Windows-portable.zip release/update.json release/update.sig --repo '${{ github.repository }}' --target '${{ github.sha }}' --title "NOMIKO $version Stable" --notes 'Stable release: standalone animated updater window with real installation stages and one-click relaunch. Signed update manifest; no Authenticode signature.'
+          gh release create $tag "NOMIKO-Setup-$version.exe" NOMIKO-Windows-portable.zip release/update.json release/update.sig --repo '${{ github.repository }}' --target '${{ github.sha }}' --title "NOMIKO $version Stable" --notes 'Stable release: integrated Qt Multimedia FFmpeg fallback for unsupported video/audio and public SoundCloud tracks, no Edge. Signed update manifest.'
           if ($LASTEXITCODE -ne 0) { throw 'Publishing release failed' }

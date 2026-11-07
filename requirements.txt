@@ -5,3 +5,6 @@ PySide6-WebEngine==6.12.0.140
 
 # Ed25519 verification of GitHub release manifests
 cryptography>=45.0.0,<47.0.0
+
+# Public SoundCloud track resolution only; no browser cookies or Microsoft browser
+yt-dlp>=2025.12.0,<2027.0.0

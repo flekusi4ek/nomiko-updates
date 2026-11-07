@@ -36,6 +36,8 @@ from .tab_drag import drop_index, neighbor_shift
 from .tab_layout import fitted_tab_width
 from .performance import should_freeze_background
 from .media_compat import is_soundcloud_host, playback_requires_gesture, missing_soundcloud_codecs
+from .native_media import NativeMediaDialog, normalize_media_source, safe_remote_url
+from .media_bridge import install_media_script
 from .soundcloud_help import SoundCloudHelpDialog
 from .update_trust import CURRENT_VERSION, CURRENT_CHANNEL
 from .update_ui import UpdateCenter, UpdateWorker
@@ -785,6 +787,16 @@ class NomikoPage(QWebEnginePage):
 
     def acceptNavigationRequest(self, url, navigation_type, is_main_frame):  # noqa: N802
         if url.host() == 'nomiko.invalid':
+            if (is_main_frame and url.scheme() == 'https' and url.path() == '/media'
+                    and self.view is self.browser.current_view()):
+                params = parse_qs(url.query(QUrl.ComponentFormattingOption.FullyEncoded),
+                                  keep_blank_values=True)
+                kind = params.get('type', ['direct'])[0]
+                media_url = params.get('url', [''])[0]
+                if normalize_media_source(media_url, kind):
+                    QTimer.singleShot(
+                        0, lambda src=media_url, k=kind:
+                        self.browser.open_native_media(src, kind=k))
             if (is_main_frame and url.scheme() == 'https' and url.path() == '/search'
                     and self.view.property('nomiko_page') in ('home', 'search')):
                 args = parse_qs(url.query(QUrl.ComponentFormattingOption.FullyEncoded), keep_blank_values=True)
@@ -883,6 +895,20 @@ class BrowserView(QWebEngineView):
         self.settings().setAttribute(
             QWebEngineSettings.WebAttribute.PlaybackRequiresUserGesture, gesture)
 
+    def contextMenuEvent(self, event):  # noqa: N802
+        """A manual FFmpeg fallback for HTTPS video/audio links under the cursor."""
+        request = self.lastContextMenuRequest()
+        source = request.mediaUrl().toString() if request is not None else ''
+        if safe_remote_url(source):
+            menu = self.createStandardContextMenu()
+            menu.addSeparator()
+            menu.addAction('Play with NOMIKO Media Player',
+                           lambda src=source: self.browser.open_native_media(src))
+            menu.exec(event.globalPos())
+            event.accept()
+            return
+        super().contextMenuEvent(event)
+
     def createWindow(self, window_type):  # noqa: N802
         return self.browser.new_tab()
 
@@ -903,6 +929,7 @@ class BrowserWindow(QMainWindow):
         self.downloads = []
         self._pending_update = None
         self._update_center = None
+        self._native_media_dialog = None
         self._update_workers = []
         self._active_downloads = {}
         self._recently_closed = []
@@ -950,6 +977,7 @@ class BrowserWindow(QMainWindow):
         except (OSError, ValueError) as exc:
             print('NOMIKO custom blocklist ignored:', exc)
         self.profile.setUrlRequestInterceptor(self.interceptor)
+        install_media_script(self.profile)
         self.profile.downloadRequested.connect(self.on_download)
         # User controls: limit local WebRTC address exposure and DNS prefetching.
         self._configure_privacy(self.store.settings)
@@ -1755,6 +1783,18 @@ class BrowserWindow(QMainWindow):
             tools.addAction(self.t(name), callback)
         menu.addAction(self.t('Make NOMIKO default browser'), self.show_default_browser_settings)
         menu.exec(self.menu_btn.mapToGlobal(self.menu_btn.rect().bottomLeft()))
+
+    def open_native_media(self, source, kind='direct'):
+        """User-initiated Qt Multimedia / FFmpeg playback. No other browser."""
+        if not normalize_media_source(source, kind):
+            QMessageBox.warning(self, 'NOMIKO Media Player',
+                                'This media link is not a supported public HTTPS URL.')
+            return
+        player = self._native_media_dialog
+        if player is None:
+            player = NativeMediaDialog(self)
+            self._native_media_dialog = player
+        player.open_source(source, kind)
 
     def show_soundcloud_playback_help(self):
         """Open local playback diagnostics without disabling protection globally."""
@@ -2784,6 +2824,15 @@ class BrowserWindow(QMainWindow):
         if self._update_center is not None:
             all_jobs += list(self._update_center.workers)
         running = [job for job in all_jobs if job.isRunning()]
+        media = self._native_media_dialog
+        if media is not None and getattr(media, '_resolver', None) is not None:
+            try:
+                if media._resolver.isRunning():
+                    QTimer.singleShot(700, self.close)
+                    event.ignore()
+                    return
+            except RuntimeError:
+                pass
         if running:
             for job in running:
                 job.requestInterruption()
