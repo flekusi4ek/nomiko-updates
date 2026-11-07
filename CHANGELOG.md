@@ -1,6 +1,14 @@
 # NOMIKO changelog
 
-## v0.9.14 Stable
+## v0.9.15 Stable
+- Add a separate attractive NOMIKO updater window after the browser closes, with dark styling, purple accents, animated activity indicator and honest install phases.
+- Replace the second native setup wizard during in-app updates with one always-visible progress window. No fake percentage while NSIS is extracting.
+- Show installation success, error messages and an **Open NOMIKO** button; preserve the original install directory, bookmarks, cookies and settings.
+- Preserve signed-update verification, checksum re-verification, safe process shutdown and rollback behavior. Headless updater mode remains available for CI.
+- Add a real Windows smoke test for the packaged, independent Tk/Tcl updater UI and keep the custom-install-path upgrade test.
+
+
+## v0.9.15 Stable
 - Restore Qt's accelerated WebEngine rendering by default. The prior software-only default could overload older CPUs. Compatibility software mode remains manually selectable.
 - Migrate the previous software-only default once, while keeping the graphics setting reversible in Performance settings. Restart required for graphics changes.
 - Freeze only quiet, hidden, unpinned background tabs after a configurable idle delay and only when Qt's recommended lifecycle state allows it. Preserve music and calls, keep documents alive and resume without discarding or reloading.

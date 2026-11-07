@@ -11,6 +11,7 @@ import re
 import subprocess
 import sys
 import time
+import tkinter
 
 
 def wait_for_pid(pid: int, seconds: int = 120) -> bool:
@@ -156,6 +157,55 @@ def notify_failure(message: str, silent: bool = False) -> None:
         pass
 
 
+def _report(progress, stage: str, message: str) -> None:
+    if progress is not None:
+        progress(stage, message)
+
+
+def _failed(message: str, code: int, silent_installer: bool, progress=None) -> int:
+    # Progress UI owns error messages. Silent CI only writes a diagnosis.
+    if progress is not None:
+        record_update_status(message)
+        _report(progress, 'error', message)
+    else:
+        notify_failure(message, silent_installer)
+    return code
+
+
+def perform_install(args, installer: Path, app_dir: Path,
+                    *, silent_installer: bool, progress=None) -> int:
+    """Shared verified installation path for headless CI and visual updates."""
+    _report(progress, 'closing', 'Making sure all browser processes have exited…')
+    if not wait_for_browser_shutdown(app_dir):
+        return _failed('NOMIKO is still running. Close all windows or restart Windows, then retry.',
+                       6, silent_installer, progress)
+
+    _report(progress, 'verifying', 'Verifying installer integrity (SHA-256)…')
+    if not installer_is_safe(installer, args.sha256):
+        return _failed('Update aborted: installer checksum mismatch.',
+                       5, silent_installer, progress)
+
+    record_update_status('NOMIKO closed; installing in the original application folder.')
+    _report(progress, 'installing', 'Installing safely. Keep this window open…')
+    command = installer_command(installer, app_dir, silent_installer)
+    try:
+        proc = subprocess.run(command, timeout=600, check=False)
+    except (OSError, subprocess.TimeoutExpired) as exc:
+        return _failed('Installer could not finish: ' + str(exc),
+                       9, silent_installer, progress)
+    if proc.returncode != 0:
+        return _failed(
+            f'Installer stopped with error {proc.returncode}. Previous files are '
+            f'preserved when rollback succeeds. Folder: {app_dir}',
+            proc.returncode, silent_installer, progress)
+    if not (app_dir / 'NOMIKO.exe').is_file():
+        return _failed('Installer finished but NOMIKO.exe was not found.',
+                       9, silent_installer, progress)
+    record_update_status('Update installed.')
+    _report(progress, 'complete', 'The new version is installed and ready.')
+    return 0
+
+
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument('--pid', type=int, required=True)
@@ -173,39 +223,45 @@ def main() -> int:
     if not app_dir.is_dir() or not (app_dir / 'NOMIKO.exe').is_file():
         notify_failure('Update aborted: could not locate the installed NOMIKO.exe.', args.silent)
         return 7
-    # Signal that the independent helper is READY before the browser shuts down.
-    # The browser must not exit on a failed or blocked helper launch.
+
+    # Browser closes only after the independent helper and its signed payload
+    # have passed validation. Preserve this handshake across GUI and CI paths.
     if args.ready_file:
         ready = Path(args.ready_file).resolve()
-        cache = installer.parent
-        if ready.parent != cache:
+        if ready.parent != installer.parent:
             notify_failure('Update aborted: invalid readiness marker.', args.silent)
             return 8
         ready.write_text('NOMIKO helper ready', encoding='utf-8')
     record_update_status('Installer verified; waiting for NOMIKO to close.')
     if not wait_for_pid(args.pid):
-        notify_failure('Update aborted: NOMIKO did not close. Close all NOMIKO windows.', args.silent)
+        notify_failure('Update aborted: NOMIKO did not close within the timeout.',
+                       args.silent)
         return 4
-    if not wait_for_browser_shutdown(app_dir):
-        notify_failure('Update deferred: NOMIKO or QtWebEngineProcess is still running. Restart Windows and use the downloaded installer.', args.silent)
-        return 6
-    if not installer_is_safe(installer, args.sha256):
-        notify_failure('Update aborted: installer checksum mismatch.', args.silent)
-        return 5
-    record_update_status('NOMIKO closed; starting installer in the original installation folder.')
-    # Visible by default: display actual NSIS errors instead of silently
-    # swallowing them. /D preserves custom install paths and pinned shortcuts.
-    command = installer_command(installer, app_dir, args.silent)
-    proc = subprocess.run(command, timeout=600, check=False)
-    if proc.returncode == 0 and (app_dir / 'NOMIKO.exe').is_file():
-        record_update_status('Update installed.')
-    else:
-        notify_failure(f'Installer failed with code {proc.returncode}. Installation folder: {app_dir}', args.silent)
-    return proc.returncode
+
+    if args.silent:
+        # No UI or Tk initialization in automation and scripted installations.
+        return perform_install(args, installer, app_dir, silent_installer=True)
+
+    # This process lives in the update cache, not in NOMIKO's installation.
+    # Only show its standalone window AFTER the browser has closed, so Qt
+    # WebEngine DLLs remain replaceable and the updater stays visible.
+    try:
+        from updater_window import run_update_window
+        return run_update_window(
+            lambda progress: perform_install(
+                args, installer, app_dir, silent_installer=True, progress=progress),
+            app_dir=app_dir, installer=installer)
+    except (ImportError, tkinter.TclError) as exc:
+        record_update_status('Visual update UI unavailable: ' + str(exc))
+        # Safe fallback to the existing native NSIS installer, still verified.
+        return perform_install(args, installer, app_dir, silent_installer=False)
 
 
 if __name__ == '__main__':
     try:
+        if '--ui-self-check' in sys.argv:
+            from updater_window import self_check
+            sys.exit(self_check())
         sys.exit(main())
     except Exception as exc:
         import traceback

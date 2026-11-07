@@ -41,6 +41,6 @@ class InstallerRecoveryTests(TestCase):
 
     def test_version(self):
         from src.update_trust import CURRENT_VERSION
-        self.assertEqual(CURRENT_VERSION, '0.9.14')
+        self.assertEqual(CURRENT_VERSION, '0.9.15')
         self.assertEqual((ROOT / '.github/release-request.txt').read_text().strip(),
-                         'PUBLISH v0.9.14')
+                         'PUBLISH v0.9.15')

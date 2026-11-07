@@ -9,7 +9,7 @@ ROOT = Path(__file__).resolve().parents[1]
 class UpdateFlowTests(unittest.TestCase):
     def test_nsis_custom_directory_is_last_and_unquoted(self):
         cmd = update_helper.installer_command(
-            Path(r'C:\Users\Example User\Downloads\NOMIKO-Setup-0.9.14.exe'),
+            Path(r'C:\Users\Example User\Downloads\NOMIKO-Setup-0.9.15.exe'),
             Path(r'C:\Users\Example User\Apps\NOMIKO Custom Folder'), True)
         self.assertIn('/S /D=', cmd)
         self.assertTrue(cmd.endswith(r'/D=C:\Users\Example User\Apps\NOMIKO Custom Folder'))
@@ -17,7 +17,7 @@ class UpdateFlowTests(unittest.TestCase):
 
     def test_interactive_installer_is_visible(self):
         cmd = update_helper.installer_command(
-            Path(r'C:\Apps\NOMIKO-Setup-0.9.14.exe'),
+            Path(r'C:\Apps\NOMIKO-Setup-0.9.15.exe'),
             Path(r'C:\Custom NOMIKO'), False)
         self.assertNotIn('/S', cmd)
         self.assertTrue(cmd.endswith(r'/D=C:\Custom NOMIKO'))
@@ -27,7 +27,7 @@ class UpdateFlowTests(unittest.TestCase):
         self.assertIn("parser.add_argument('--ready-file'", helper)
         self.assertIn('wait_for_pid(args.pid)', helper)
         self.assertIn('wait_for_browser_shutdown(app_dir)', helper)
-        self.assertIn('installer_command(installer, app_dir, args.silent)', helper)
+        self.assertIn('installer_command(installer, app_dir, silent_installer)', helper)
         self.assertIn('notify_failure(', helper)
 
     def test_ui_starts_helper_before_closing(self):
@@ -48,7 +48,7 @@ class UpdateFlowTests(unittest.TestCase):
 
     def test_stable_version(self):
         from src.update_trust import CURRENT_VERSION, CURRENT_CHANNEL
-        self.assertEqual((CURRENT_VERSION, CURRENT_CHANNEL), ('0.9.14', 'stable'))
+        self.assertEqual((CURRENT_VERSION, CURRENT_CHANNEL), ('0.9.15', 'stable'))
 
 
 if __name__ == '__main__':

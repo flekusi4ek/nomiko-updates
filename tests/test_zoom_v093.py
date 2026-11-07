@@ -1,4 +1,4 @@
-"""NOMIKO 0.9.14 zoom and tab-preservation regression tests (offline)."""
+"""NOMIKO 0.9.15 zoom and tab-preservation regression tests (offline)."""
 import unittest
 from pathlib import Path
 
@@ -89,6 +89,6 @@ class BrowserWiringTests(unittest.TestCase):
         self.assertIn("'Default zoom'", settings)
         self.assertIn("'Zoom text only'", settings)
         from src.update_trust import CURRENT_VERSION
-        self.assertEqual(CURRENT_VERSION, '0.9.14')
+        self.assertEqual(CURRENT_VERSION, '0.9.15')
         self.assertEqual((ROOT / '.github/release-request.txt').read_text().strip(),
-                         'PUBLISH v0.9.14')
+                         'PUBLISH v0.9.15')
