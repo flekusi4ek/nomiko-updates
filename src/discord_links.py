@@ -54,7 +54,7 @@ def discord_protocol_registered() -> bool:
             winreg.QueryValueEx(key, 'URL Protocol')
         with winreg.OpenKey(winreg.HKEY_CLASSES_ROOT,
                             r'discord\shell\open\command') as key:
-            command, _ = winreg.QueryValueEx(key, None)
+            command, _ = winreg.QueryValueEx(key, '')
         return bool(str(command).strip())
     except (OSError, ImportError, ValueError):
         return False
