@@ -38,6 +38,7 @@ from .performance import should_freeze_background
 from .media_compat import is_soundcloud_host, playback_requires_gesture, missing_soundcloud_codecs
 from .native_media import NativeMediaDialog, normalize_media_source, safe_remote_url
 from .media_bridge import install_media_script
+from .discord_links import should_open_in_discord, open_discord_invite
 from .soundcloud_help import SoundCloudHelpDialog
 from .update_trust import CURRENT_VERSION, CURRENT_CHANNEL
 from .update_ui import UpdateCenter, UpdateWorker
@@ -786,6 +787,22 @@ class NomikoPage(QWebEnginePage):
         self.setBackgroundColor(QColor(page_background(browser.store.settings)))
 
     def acceptNavigationRequest(self, url, navigation_type, is_main_frame):  # noqa: N802
+        # Only a genuine invite from a click or an explicitly opened URL is
+        # passed to the user's installed Discord desktop handler. All other
+        # Discord pages (including OAuth/login) stay in NOMIKO.
+        if should_open_in_discord(
+            url.toString(), navigation_type,
+            main_frame=is_main_frame,
+            enabled=self.browser.store.settings.get('discord_invites_in_app', True),
+            restoring_session=self.browser._restoring_session,
+        ):
+            if open_discord_invite(url.toString()):
+                QTimer.singleShot(
+                    0, lambda: self.browser.status.setText(
+                        'Discord invite opened in the desktop app.'))
+                return False
+            # No registered Discord app, or Windows rejected the protocol:
+            # keep ordinary browser navigation instead of losing the invite.
         if url.host() == 'nomiko.invalid':
             if (is_main_frame and url.scheme() == 'https' and url.path() == '/media'
                     and self.view is self.browser.current_view()):

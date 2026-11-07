@@ -124,15 +124,15 @@ jobs:
         run: |
           & 'C:\Program Files (x86)\NSIS\makensis.exe' installer\NOMIKO.nsi
           if ($LASTEXITCODE -ne 0) { throw "NSIS installer failed." }
-          $found = Get-ChildItem -Path . -Recurse -File -Filter 'NOMIKO-Setup-0.9.16.exe' | Select-Object -First 1
+          $found = Get-ChildItem -Path . -Recurse -File -Filter 'NOMIKO-Setup-0.9.17.exe' | Select-Object -First 1
           if (-not $found) { throw "Installer was not generated." }
-          $target = Join-Path (Get-Location).Path 'NOMIKO-Setup-0.9.16.exe'
+          $target = Join-Path (Get-Location).Path 'NOMIKO-Setup-0.9.17.exe'
           if ($found.FullName -ne $target) { Copy-Item -LiteralPath $found.FullName -Destination $target -Force }
 
       - name: Smoke-test installed NOMIKO
         shell: pwsh
         run: |
-          $installer = Join-Path (Get-Location).Path 'NOMIKO-Setup-0.9.16.exe'
+          $installer = Join-Path (Get-Location).Path 'NOMIKO-Setup-0.9.17.exe'
           $proc = Start-Process -FilePath $installer -ArgumentList '/S' -Wait -PassThru
           if ($proc.ExitCode -ne 0) { throw "Silent installer failed with code $($proc.ExitCode)" }
           $exe = Join-Path $env:LOCALAPPDATA 'Programs\\NOMIKO\\NOMIKO.exe'
@@ -152,7 +152,7 @@ jobs:
       - name: Verify in-app update helper upgrades the original custom folder
         shell: pwsh
         run: |
-          $setup = Join-Path (Get-Location).Path 'NOMIKO-Setup-0.9.16.exe'
+          $setup = Join-Path (Get-Location).Path 'NOMIKO-Setup-0.9.17.exe'
           $custom = Join-Path $env:LOCALAPPDATA 'Programs\\NOMIKO Custom Folder'
           $initial = Start-Process -FilePath $setup -ArgumentList "/S /D=$custom" -Wait -PassThru
           if ($initial.ExitCode -ne 0) { throw "Custom-folder initial installation failed: $($initial.ExitCode)" }
@@ -162,7 +162,7 @@ jobs:
           Set-Content -Path $marker -Value 'Previous version folder marker'
           $cache = Join-Path $env:LOCALAPPDATA 'NOMIKO\\updates'
           New-Item -ItemType Directory -Force -Path $cache | Out-Null
-          $cachedSetup = Join-Path $cache 'NOMIKO-Setup-0.9.16.exe'
+          $cachedSetup = Join-Path $cache 'NOMIKO-Setup-0.9.17.exe'
           Copy-Item -LiteralPath $setup -Destination $cachedSetup -Force
           $sha = (Get-FileHash -LiteralPath $cachedSetup -Algorithm SHA256).Hash.ToLowerInvariant()
           $helper = Join-Path (Get-Location).Path 'helper-dist\\NOMIKO-UpdateHelper.exe'
@@ -231,7 +231,7 @@ jobs:
         run: |
           if (-not $env:NOMIKO_SIGNING_KEY_B64) { throw 'NOMIKO_SIGNING_KEY_B64 is missing' }
           $version = '${{ steps.gate.outputs.version }}'
-          python tools/sign_release.py --version $version --channel stable --installer "NOMIKO-Setup-$version.exe" --out release --notes 'Qt Multimedia FFmpeg fallback for video and SoundCloud public tracks, no Edge or WebView2.'
+          python tools/sign_release.py --version $version --channel stable --installer "NOMIKO-Setup-$version.exe" --out release --notes 'Open Discord server invitations in installed desktop app without browser sign-in.'
           if ($LASTEXITCODE -ne 0) { throw 'Signing failed' }
 
       - name: Publish signed GitHub Release
@@ -242,5 +242,5 @@ jobs:
         run: |
           $tag = '${{ steps.gate.outputs.tag }}'
           $version = '${{ steps.gate.outputs.version }}'
-          gh release create $tag "NOMIKO-Setup-$version.exe" NOMIKO-Windows-portable.zip release/update.json release/update.sig --repo '${{ github.repository }}' --target '${{ github.sha }}' --title "NOMIKO $version Stable" --notes 'Stable release: integrated Qt Multimedia FFmpeg fallback for unsupported video/audio and public SoundCloud tracks, no Edge. Signed update manifest.'
+          gh release create $tag "NOMIKO-Setup-$version.exe" NOMIKO-Windows-portable.zip release/update.json release/update.sig --repo '${{ github.repository }}' --target '${{ github.sha }}' --title "NOMIKO $version Stable" --notes 'Stable release: safe Discord desktop invite handoff, browser fallback and preference. Signed update manifest.'
           if ($LASTEXITCODE -ne 0) { throw 'Publishing release failed' }

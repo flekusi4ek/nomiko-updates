@@ -72,4 +72,4 @@ class NativeMediaTests(TestCase):
 
     def test_release(self):
         from src.update_trust import CURRENT_VERSION, CURRENT_CHANNEL
-        self.assertEqual((CURRENT_VERSION, CURRENT_CHANNEL), ('0.9.16','stable'))
+        self.assertEqual((CURRENT_VERSION, CURRENT_CHANNEL), ('0.9.17','stable'))

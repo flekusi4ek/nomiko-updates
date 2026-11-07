@@ -38,11 +38,11 @@ class StableGraphicsTests(unittest.TestCase):
         self.assertNotIn('setLifecycleState(QWebEnginePage.LifecycleState.Discarded)', ui)
 
     def test_stable_release_is_not_prerelease(self):
-        self.assertEqual(CURRENT_VERSION, '0.9.16')
+        self.assertEqual(CURRENT_VERSION, '0.9.17')
         self.assertEqual(CURRENT_CHANNEL, 'stable')
         self.assertEqual(DEFAULT_SETTINGS['updates_channel'], 'stable')
         self.assertEqual((ROOT / '.github/release-request.txt').read_text().strip(),
-                         'PUBLISH v0.9.16')
+                         'PUBLISH v0.9.17')
         workflow = (ROOT / '.github/workflows/windows.yml').read_text()
         self.assertIn('python tools/gui_smoke.py', workflow)
         self.assertIn('--channel stable --installer', workflow)
@@ -51,9 +51,9 @@ class StableGraphicsTests(unittest.TestCase):
 
     def test_installer_stable_version(self):
         nsi = (ROOT / 'installer/NOMIKO.nsi').read_text()
-        self.assertIn('NOMIKO-Setup-0.9.16.exe', nsi)
+        self.assertIn('NOMIKO-Setup-0.9.17.exe', nsi)
         self.assertIn('Name "${APPNAME} ${VERSION} Stable"', nsi)
-        self.assertNotIn('0.9.16-alpha', nsi)
+        self.assertNotIn('0.9.17-alpha', nsi)
 
     def test_signed_manifest_rejects_mismatched_stable_identity(self):
         updater = (ROOT / 'src/updater.py').read_text()

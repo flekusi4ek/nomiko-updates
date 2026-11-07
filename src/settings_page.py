@@ -181,6 +181,12 @@ class SettingsPane(QWidget):
         restore.toggled.connect(lambda v: self.set_preference(restore_tabs=v))
         box.addWidget(restore)
         self.note(box, 'Only ordinary tabs are restored. Private sessions never return.')
+        discord_invites = QCheckBox(self.t('Open Discord server invites in the desktop app'))
+        discord_invites.setChecked(s.get('discord_invites_in_app', True))
+        discord_invites.toggled.connect(
+            lambda enabled: self.set_preference(discord_invites_in_app=enabled))
+        box.addWidget(discord_invites)
+        self.note(box, 'Only real Discord invite links you open are sent to your installed Discord app. No browser sign-in is needed. If the app is unavailable, the invite opens normally in NOMIKO. Disable this to keep invites in the browser.')
         self.note(box, 'Tip: Ctrl+T opens a new tab · Ctrl+L selects the address · Ctrl+Shift+M opens Protection · Ctrl+Shift+G toggles Gaming mode · Ctrl+M mutes a tab.')
         lang = self.combo(list(LANGUAGES.items()), s.get('language', 'en'))
         self.row(box, 'Language', lang)

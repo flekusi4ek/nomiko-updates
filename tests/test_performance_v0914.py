@@ -70,9 +70,9 @@ class PerformanceRegressionTests(TestCase):
         self.assertIn("('hardware', 'Automatic GPU acceleration · recommended')", settings)
 
     def test_stable_version_and_no_network_probe_in_ci(self):
-        self.assertEqual((CURRENT_VERSION, CURRENT_CHANNEL), ('0.9.16', 'stable'))
+        self.assertEqual((CURRENT_VERSION, CURRENT_CHANNEL), ('0.9.17', 'stable'))
         self.assertEqual((ROOT / '.github/release-request.txt').read_text().strip(),
-                         'PUBLISH v0.9.16')
+                         'PUBLISH v0.9.17')
         workflow = (ROOT / '.github/workflows/windows.yml').read_text()
         self.assertNotIn('Diagnose real Technical City page', workflow)
         self.assertIn('Smoke-test first-frame rendering and tab switching', workflow)

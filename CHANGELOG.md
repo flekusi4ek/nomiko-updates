@@ -1,6 +1,14 @@
 # NOMIKO changelog
 
-## v0.9.16 Stable
+## v0.9.17 Stable
+- Open genuine Discord server invitations in the locally installed Discord desktop app on user-clicked or explicitly opened invite URLs. No duplicate browser login needed.
+- Support discord.gg/INVITE and discord.com/invite/INVITE, preserving case-sensitive codes. Never intercept Discord OAuth, account sign-in, channels or unrelated pages.
+- Use the user-registered Windows Discord protocol only for top-level user navigation. Never spawn apps from iframes, background redirects or restored sessions.
+- Fall back to normal browsing if Discord is absent or Windows has no registered handler.
+- Add a reversible General setting and tests for spoofed URLs, redirects, missing handler and desktop launch failures.
+
+
+## v0.9.17 Stable
 - Add Qt Multimedia / FFmpeg native player for public HTTPS audio and video streams unsupported by Qt WebEngine. No Edge, WebView2 or third-party browser.
 - Add clickable fallback beside failed HTML5 video and Fortnite.GG item-preview videos with HTTPS sources, plus a right-click video action.
 - Add "Play in NOMIKO" beside public SoundCloud Likes tracks. Resolve public stream URLs without copying user cookies or bypassing DRM; private/restricted songs may still be unavailable.
@@ -8,7 +16,7 @@
 - Package Qt Multimedia, FFmpeg backend and yt-dlp with Windows tests; preserve profile and update mechanism.
 
 
-## v0.9.16 Stable
+## v0.9.17 Stable
 - Add a separate attractive NOMIKO updater window after the browser closes, with dark styling, purple accents, animated activity indicator and honest install phases.
 - Replace the second native setup wizard during in-app updates with one always-visible progress window. No fake percentage while NSIS is extracting.
 - Show installation success, error messages and an **Open NOMIKO** button; preserve the original install directory, bookmarks, cookies and settings.
@@ -16,7 +24,7 @@
 - Add a real Windows smoke test for the packaged, independent Tk/Tcl updater UI and keep the custom-install-path upgrade test.
 
 
-## v0.9.16 Stable
+## v0.9.17 Stable
 - Restore Qt's accelerated WebEngine rendering by default. The prior software-only default could overload older CPUs. Compatibility software mode remains manually selectable.
 - Migrate the previous software-only default once, while keeping the graphics setting reversible in Performance settings. Restart required for graphics changes.
 - Freeze only quiet, hidden, unpinned background tabs after a configurable idle delay and only when Qt's recommended lifecycle state allows it. Preserve music and calls, keep documents alive and resume without discarding or reloading.

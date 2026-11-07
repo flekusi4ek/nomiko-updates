@@ -33,6 +33,7 @@ DEFAULT_SETTINGS = {
     'ad_blocking': True,
     'block_popups': True,
     'autoplay_guard': True,
+    'discord_invites_in_app': True,  # Only clicked/typed Discord invites.
     'clean_tracking_links': True,
     'block_exceptions': [],
     'performance_mode': 'balanced',
@@ -187,7 +188,7 @@ class Store:
         if self.settings.get('sidebar_style') not in ('icon', 'expanded'):
             self.settings['sidebar_style'] = 'expanded'
         self.settings['save_history'] = self.settings.get('save_history', True) is True
-        for key in ('tracker_blocking', 'ad_blocking', 'block_popups', 'autoplay_guard', 'clean_tracking_links'):
+        for key in ('tracker_blocking', 'ad_blocking', 'block_popups', 'autoplay_guard', 'clean_tracking_links', 'discord_invites_in_app'):
             self.settings[key] = self.settings.get(key, DEFAULT_SETTINGS[key]) is True
         # Firefox-style global website zoom. Ignore corrupt/old saved values.
         from .zoom_settings import zoom_percent
