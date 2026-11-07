@@ -20,7 +20,7 @@ from PySide6.QtMultimedia import QMediaFormat, QMediaPlayer, QAudioOutput
 from PySide6.QtWidgets import QApplication
 
 app = QApplication([])
-tmp = tempfile.TemporaryDirectory(prefix='nomiko-media-smoke-')
+tmp = tempfile.TemporaryDirectory(prefix='nomiko-media-smoke-', ignore_cleanup_errors=True)
 source = Path(tmp.name) / 'tone.wav'
 with wave.open(str(source), 'wb') as w:
     w.setnchannels(1)
@@ -48,7 +48,8 @@ def finish():
     print('NOMIKO_MEDIA_SMOKE=' + json.dumps(
         {'statuses':states, 'errors':errors,
          'duration':player.duration(), 'position':player.position()}), flush=True)
-    success = any(s in ('LoadedMedia', 'BufferedMedia', 'EndOfMedia') for s in states)
+    success = (any(s in ('LoadedMedia', 'BufferedMedia', 'EndOfMedia') for s in states)
+               and 'H264' in video and 'MP3' in audio and 'AAC' in audio)
     if not success:
         print('Media backend failed to load a valid offline WAV file.', flush=True)
     app.exit(0 if success else 2)
