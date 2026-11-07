@@ -34,6 +34,7 @@ from .theme_background import page_background, apply_page_background
 from .windows_integration import open_windows_default_apps
 from .tab_drag import drop_index, neighbor_shift
 from .tab_layout import fitted_tab_width
+from .performance import should_freeze_background
 from .media_compat import is_soundcloud_host, playback_requires_gesture, missing_soundcloud_codecs
 from .soundcloud_help import SoundCloudHelpDialog
 from .update_trust import CURRENT_VERSION, CURRENT_CHANNEL
@@ -500,7 +501,7 @@ class BrowserTabs(QWidget):
 
     def resizeEvent(self, event):  # noqa: N802
         super().resizeEvent(event)
-        self._tab_width_timer.start(0)
+        self._tab_width_timer.start(16)
 
     def _update_tab_width(self):
         if self._position in ('left', 'right'):
@@ -914,10 +915,11 @@ class BrowserWindow(QMainWindow):
         self._skip_final_session_save = False
         self._settings_panes = []
         self._idle_since = {}
+        self._last_active_view = None
         self._renderer_recovery = {}
         self._session_timer = QTimer(self)
         self._session_timer.setSingleShot(True)
-        self._session_timer.setInterval(900)
+        self._session_timer.setInterval(2200)
         self._session_timer.timeout.connect(self._save_open_tabs)
         self.setWindowTitle('NOMIKO — Private' if private else 'NOMIKO')
         self.setMinimumSize(850, 560)
@@ -1220,6 +1222,8 @@ class BrowserWindow(QMainWindow):
                 self._recently_closed = self._recently_closed[-15:]
         self.tabs.removeTab(index)
         self._idle_since.pop(view, None)
+        if self._last_active_view is view:
+            self._last_active_view = None
         self._renderer_recovery.pop(view, None)
         view.deleteLater()
         self.status.setText(self.t('Ready'))
@@ -1232,8 +1236,13 @@ class BrowserWindow(QMainWindow):
 
     def on_current_tab_changed(self, index):
         view = self.current_view()
+        now = time.monotonic()
+        previous = self._last_active_view
+        if previous is not view and isinstance(previous, BrowserView):
+            self._idle_since[previous] = now
+        self._last_active_view = view
         if isinstance(view, BrowserView):
-            self._idle_since[view] = time.monotonic()
+            self._idle_since[view] = now
             try:
                 if view.page().lifecycleState() != QWebEnginePage.LifecycleState.Active:
                     view.page().setLifecycleState(QWebEnginePage.LifecycleState.Active)
@@ -2001,14 +2010,42 @@ class BrowserWindow(QMainWindow):
             break
 
     def _maintain_background_tabs(self):
-        """Update protection counters only; never freeze or discard web pages.
+        """Freeze only Qt-approved idle tabs; never discard or reload them.
 
-        Older NOMIKO versions proactively discarded background tabs after
-        a short idle timeout, causing a full reload on activation. Even in
-        Gaming/Ultra modes we now keep the document live until the user
-        explicitly closes it. The operating system may still evict renderers
-        under extreme memory pressure; that is not controlled here.
+        Qt's recommendedState protects background audio, calls and other
+        active pages. Non-visible Frozen tabs resume when selected. The
+        operation runs at a low frequency rather than polling each second.
         """
+        mode = self.store.settings.get('performance_mode', 'balanced')
+        now = time.monotonic()
+        active = self.current_view()
+        state = QWebEnginePage.LifecycleState
+        for i in range(self.tabs.count()):
+            view = self.tabs.widget(i)
+            if not isinstance(view, BrowserView):
+                continue
+            try:
+                page = view.page()
+                if view is active or mode == 'off':
+                    if page.lifecycleState() == state.Frozen:
+                        page.setLifecycleState(state.Active)
+                    continue
+                if page.lifecycleState() != state.Active:
+                    continue
+                data = self.tabs.bar.tabData(i) or {}
+                if should_freeze_background(
+                    mode,
+                    idle_seconds=now - self._idle_since.get(view, now),
+                    visible=view.isVisible(),
+                    loading=page.isLoading(),
+                    audible=page.recentlyAudible(),
+                    pinned=bool(data.get('pinned')),
+                    recommended_allows_freeze=(page.recommendedState() != state.Active),
+                ):
+                    page.setLifecycleState(state.Frozen)
+            except RuntimeError:
+                # A closed/terminated tab can disappear during deferred paints.
+                continue
         if not self.private:
             counts = self.interceptor.counts()
             text = f'PROTECTION  ·  ADS {counts["ads"]}  /  TRACKERS {counts["trackers"]}'
@@ -2187,6 +2224,7 @@ class BrowserWindow(QMainWindow):
                 win.profile.setHttpCacheMaximumSize(int(win.store.settings['cache_limit_mb']) * 1024 * 1024)
             if 'performance_mode' in changes:
                 win._idle_timer.setInterval(10000 if win.store.settings['performance_mode'] == 'ultra' else 15000)
+                win._maintain_background_tabs()
             changed = set(changes)
             if changed & {'default_zoom', 'zoom_text_only'}:
                 configure_zoom_script(win.profile, win.store.settings)

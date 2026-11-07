@@ -446,26 +446,26 @@ class SettingsPane(QWidget):
         # RESOURCE SAVER
         box = self.section('Performance')
         rendering = self.combo([
-            ('compatibility', 'Compatibility · fixes black screens'),
-            ('hardware', 'Hardware acceleration · faster'),
-        ], s.get('graphics_mode', 'compatibility'))
+            ('hardware', 'Automatic GPU acceleration · recommended'),
+            ('compatibility', 'Compatibility · software rendering'),
+        ], s.get('graphics_mode', 'hardware'))
         rendering.currentIndexChanged.connect(
             lambda _: self.set_preference(graphics_mode=rendering.currentData()))
         self.row(box, 'Website graphics', rendering)
-        self.note(box, 'Compatibility disables Chromium GPU acceleration to avoid black pages on some Windows drivers. Hardware can be faster for video/WebGL but may flicker. Restart NOMIKO after changing this setting.')
-        perf = self.combo([('off', 'Off · keep tabs active'),
-                           ('balanced', 'Balanced · keep tabs active'),
-                           ('gaming', 'Gaming · keep tabs active'),
-                           ('ultra', 'Ultra · keep tabs active')],
+        self.note(box, 'Automatic lets Qt use your graphics card when available, reducing CPU load. If black pages or flickering appear, use Compatibility (software). Restart NOMIKO to apply graphics changes.')
+        perf = self.combo([('off', 'Off · keep all tabs active'),
+                           ('balanced', 'Balanced · sleep safe inactive tabs after 3 min'),
+                           ('gaming', 'Gaming · sleep safe inactive tabs after 100 s'),
+                           ('ultra', 'Ultra · sleep safe inactive tabs after 55 s')],
                           s.get('performance_mode', 'balanced'))
         perf.currentIndexChanged.connect(lambda _: self.set_preference(performance_mode=perf.currentData()))
         self.row(box, 'Background tab saving', perf)
-        self.note(box, 'NOMIKO never freezes or discards background tabs automatically in any profile. Windows or a site can still reload after crashes or system memory pressure.')
+        self.note(box, 'Only hidden, idle tabs that Qt marks safe are frozen. Music, calls, loading and pinned tabs are kept active. Frozen tabs resume on selection, without forced reload. This reduces background CPU load; tabs still use some RAM.')
         cache = self.combo([('64', '64 MB'), ('128', '128 MB'), ('256', '256 MB'), ('512', '512 MB')], str(s.get('cache_limit_mb', 128)))
         cache.currentIndexChanged.connect(lambda _: self.set_preference(cache_limit_mb=int(cache.currentData())))
         self.row(box, 'HTTP disk cache limit', cache)
         self.note(box, 'Cache limit reduces disk usage, not guaranteed RAM use. Audio/video tabs can remain active by design.')
-        self.note(box, 'Keeping tabs active uses more RAM. NOMIKO no longer forces background reloads to save resources.')
+        self.note(box, 'No automatic tab discarding: NOMIKO does not destroy background pages to save memory.')
 
         # LOCAL HOME WIDGETS
         box = self.section('Widgets')

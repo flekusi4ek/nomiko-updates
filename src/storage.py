@@ -36,7 +36,7 @@ DEFAULT_SETTINGS = {
     'clean_tracking_links': True,
     'block_exceptions': [],
     'performance_mode': 'balanced',
-    'graphics_mode': 'compatibility',  # Qt WebEngine software GPU fallback.
+    'graphics_mode': 'hardware',  # Qt picks an accelerated backend with fallback.
     'updates_channel': 'stable',
     'default_zoom': 100,
     'zoom_text_only': False,
@@ -138,6 +138,14 @@ def _save(path: Path, value):
 class Store:
     def __init__(self):
         self.settings = {**DEFAULT_SETTINGS, **_load(SETTINGS_FILE, {})}
+        # v0.9.12 defaulted to software-only Chromium rendering. On older
+        # CPUs, that can overwhelm the browser. Restore Qt's own GPU choice
+        # once; the reversible Compatibility option remains in Settings.
+        if not self.settings.get('_v0914_graphics_migrated', False):
+            if self.settings.get('graphics_mode') == 'compatibility':
+                self.settings['graphics_mode'] = 'hardware'
+            self.settings['_v0914_graphics_migrated'] = True
+            self.save_settings()
         # Move former Alpha installations to Stable once, as requested.
         # An explicitly selected channel remains persistent thereafter.
         if not self.settings.get('_v0912_stable_channel_migrated', False):
@@ -324,10 +332,14 @@ class Store:
         return {'tabs': tabs, 'active': min(max(0, active), max(0, len(tabs) - 1))}
 
     def save_session(self, tabs, active=0):
-        """Atomically save the ordinary tab addresses; never use for private windows."""
+        """Avoid identical session rewrites during frequent tab UI events."""
         safe = [item for item in (normalize_session_tab(t) for t in tabs[:60]) if item is not None]
         index = active if isinstance(active, int) else 0
-        _save(SESSION_FILE, {'tabs': safe, 'active': min(max(0, index), max(0, len(safe) - 1))})
+        payload = {'tabs': safe, 'active': min(max(0, index), max(0, len(safe) - 1))}
+        if payload == getattr(self, '_last_saved_session', None):
+            return
+        _save(SESSION_FILE, payload)
+        self._last_saved_session = payload
 
     def clear_session(self):
         self.save_session([], 0)

@@ -1,8 +1,8 @@
 """Conservative graphics startup policy for Windows Qt WebEngine.
 
-Qt documents --disable-gpu as a software-rendering fallback for black/blank
-pages on machines with broken graphics backends. This setting is applied before
-Qt WebEngine is imported; changing it requires a browser restart.
+Normal mode uses Qt/Chromium's GPU acceleration and built-in fallback.
+Compatibility mode forces --disable-gpu only when explicitly selected. This
+flag must be set before the first Qt WebEngine import, requiring a restart.
 """
 from __future__ import annotations
 import os
@@ -11,14 +11,14 @@ MODES = ('compatibility', 'hardware')
 
 
 def rendering_mode(settings):
-    value = settings.get('graphics_mode', 'compatibility')
-    return value if value in MODES else 'compatibility'
+    value = settings.get('graphics_mode', 'hardware')
+    return value if value in MODES else 'hardware'
 
 
 def chromium_flags(mode, existing=''):
     """Keep existing safe flags while adding Qt's documented software fallback."""
     tokens = str(existing).split()
-    if mode != 'hardware' and '--disable-gpu' not in tokens:
+    if mode == 'compatibility' and '--disable-gpu' not in tokens:
         tokens.append('--disable-gpu')
     return ' '.join(tokens)
 

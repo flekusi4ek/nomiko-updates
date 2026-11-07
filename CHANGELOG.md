@@ -1,5 +1,13 @@
 # NOMIKO changelog
 
+## v0.9.14 Stable
+- Restore Qt's accelerated WebEngine rendering by default. The prior software-only default could overload older CPUs. Compatibility software mode remains manually selectable.
+- Migrate the previous software-only default once, while keeping the graphics setting reversible in Performance settings. Restart required for graphics changes.
+- Freeze only quiet, hidden, unpinned background tabs after a configurable idle delay and only when Qt's recommended lifecycle state allows it. Preserve music and calls, keep documents alive and resume without discarding or reloading.
+- Stop needless session file rewrites and debounce frequent tab resize/session events.
+- Remove unreliable cloud-runner real-website probes from stable-release CI. Keep offline first-frame, installed-EXE and original-folder update tests.
+
+
 ## v0.9.13 Stable
 - Fix the in-app Exit & Install flow by starting and validating an independent updater before closing browser windows.
 - Install into the original NOMIKO folder, even when it contains spaces or was chosen outside the default location. Preserve pinned shortcuts and installed version.
