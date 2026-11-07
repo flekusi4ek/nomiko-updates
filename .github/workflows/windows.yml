@@ -55,6 +55,20 @@ jobs:
         shell: pwsh
         run: python -m unittest discover -s tests -q
 
+      - name: Diagnose real Technical City page with normal privacy filters
+        shell: pwsh
+        continue-on-error: true
+        run: |
+          python tools/site_probe.py
+          Write-Host "Site probe exit status: $LASTEXITCODE"
+
+      - name: Diagnose real Technical City page with site-only exception
+        shell: pwsh
+        continue-on-error: true
+        run: |
+          python tools/site_probe.py --allow-site
+          Write-Host "Allowlist probe exit status: $LASTEXITCODE"
+
       - name: Build NOMIKO
         shell: pwsh
         run: |
