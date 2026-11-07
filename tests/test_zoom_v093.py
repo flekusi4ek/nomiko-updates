@@ -1,4 +1,4 @@
-"""NOMIKO 0.9.13 zoom and tab-preservation regression tests (offline)."""
+"""NOMIKO 0.9.14 zoom and tab-preservation regression tests (offline)."""
 import unittest
 from pathlib import Path
 
@@ -78,15 +78,17 @@ class BrowserWiringTests(unittest.TestCase):
     def test_no_background_freeze_or_discard(self):
         ui = (ROOT / 'src/ui.py').read_text(encoding='utf-8')
         handler = ui.split('    def _maintain_background_tabs(self):', 1)[1].split('    def on_widget_action(', 1)[0]
-        self.assertNotIn('.setLifecycleState(', handler)
-        self.assertNotIn('recommendedState()', handler)
-        self.assertNotIn('discard_after', handler)
+        self.assertIn('page.recommendedState() != state.Active', handler)
+        self.assertIn('page.recentlyAudible()', handler)
+        self.assertIn('page.setLifecycleState(state.Frozen)', handler)
+        self.assertNotIn('state.Discarded', handler)
+        self.assertNotIn('view.reload(', handler)
 
     def test_settings_controls_and_release(self):
         settings = (ROOT / 'src/settings_page.py').read_text(encoding='utf-8')
         self.assertIn("'Default zoom'", settings)
         self.assertIn("'Zoom text only'", settings)
         from src.update_trust import CURRENT_VERSION
-        self.assertEqual(CURRENT_VERSION, '0.9.13')
+        self.assertEqual(CURRENT_VERSION, '0.9.14')
         self.assertEqual((ROOT / '.github/release-request.txt').read_text().strip(),
-                         'PUBLISH v0.9.13')
+                         'PUBLISH v0.9.14')
