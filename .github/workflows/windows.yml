@@ -55,6 +55,12 @@ jobs:
         shell: pwsh
         run: python -m unittest discover -s tests -q
 
+      - name: Probe Windows native WebView2 media codecs
+        shell: pwsh
+        run: |
+          python tools/native_media_probe.py
+          if ($LASTEXITCODE -ne 0) { throw 'Native media probe failed.' }
+
       - name: Build NOMIKO
         shell: pwsh
         run: |
